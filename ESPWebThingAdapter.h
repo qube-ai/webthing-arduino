@@ -50,12 +50,12 @@ public:
 
   void begin() {
     name.toLowerCase();
-    if (MDNS.begin(this->name.c_str())) {
-      Serial.println("MDNS responder started");
-    }
+    // if (MDNS.begin(this->name.c_str())) {
+    //   Serial.println("MDNS responder started");
+    // }
 
-    MDNS.addService("webthing", "tcp", port);
-    MDNS.addServiceTxt("webthing", "tcp", "path", "/");
+    // MDNS.addService("webthing", "tcp", port);
+    // MDNS.addServiceTxt("webthing", "tcp", "path", "/");
 
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
     DefaultHeaders::Instance().addHeader("Access-Control-Allow-Methods",
@@ -64,15 +64,15 @@ public:
         "Access-Control-Allow-Headers",
         "Origin, X-Requested-With, Content-Type, Accept");
 
-    this->server.onNotFound(std::bind(&WebThingAdapter::handleUnknown, this,
-                                      std::placeholders::_1));
+    // this->server.onNotFound(std::bind(&WebThingAdapter::handleUnknown, this,
+    //                                   std::placeholders::_1));
 
-    this->server.on("/*", HTTP_OPTIONS,
-                    std::bind(&WebThingAdapter::handleOptions, this,
-                              std::placeholders::_1));
-    this->server.on("/", HTTP_GET,
-                    std::bind(&WebThingAdapter::handleThings, this,
-                              std::placeholders::_1));
+    // this->server.on("/*", HTTP_OPTIONS,
+    //                 std::bind(&WebThingAdapter::handleOptions, this,
+    //                           std::placeholders::_1));
+    // this->server.on("/", HTTP_GET,
+    //                 std::bind(&WebThingAdapter::handleThings, this,
+    //                           std::placeholders::_1));
 
     ThingDevice *device = this->firstDevice;
     while (device != nullptr) {
@@ -100,54 +100,54 @@ public:
       ThingAction *action = device->firstAction;
       while (action != nullptr) {
         String actionBase = deviceBase + "/actions/" + action->id;
-        this->server.on(actionBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingActionGet, this,
-                                  std::placeholders::_1, device, action));
-        this->server.on(actionBase.c_str(), HTTP_POST,
-                        std::bind(&WebThingAdapter::handleThingActionPost,
-                                  this, std::placeholders::_1, device, action),
-                        NULL,
-                        std::bind(&WebThingAdapter::handleBody, this,
-                                  std::placeholders::_1, std::placeholders::_2,
-                                  std::placeholders::_3, std::placeholders::_4,
-                                  std::placeholders::_5));
-        this->server.on(actionBase.c_str(), HTTP_DELETE,
-                        std::bind(&WebThingAdapter::handleThingActionDelete,
-                                  this, std::placeholders::_1, device,
-                                  action));
+      //   this->server.on(actionBase.c_str(), HTTP_GET,
+      //                   std::bind(&WebThingAdapter::handleThingActionGet, this,
+      //                             std::placeholders::_1, device, action));
+      //   this->server.on(actionBase.c_str(), HTTP_POST,
+      //                   std::bind(&WebThingAdapter::handleThingActionPost,
+      //                             this, std::placeholders::_1, device, action),
+      //                   NULL,
+      //                   std::bind(&WebThingAdapter::handleBody, this,
+      //                             std::placeholders::_1, std::placeholders::_2,
+      //                             std::placeholders::_3, std::placeholders::_4,
+      //                             std::placeholders::_5));
+      //   this->server.on(actionBase.c_str(), HTTP_DELETE,
+      //                   std::bind(&WebThingAdapter::handleThingActionDelete,
+      //                             this, std::placeholders::_1, device,
+      //                             action));
         action = (ThingAction *)action->next;
       }
 
       ThingEvent *event = device->firstEvent;
       while (event != nullptr) {
         String eventBase = deviceBase + "/events/" + event->id;
-        this->server.on(eventBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingEventGet, this,
-                                  std::placeholders::_1, device, event));
+        // this->server.on(eventBase.c_str(), HTTP_GET,
+        //                 std::bind(&WebThingAdapter::handleThingEventGet, this,
+        //                           std::placeholders::_1, device, event));
         event = (ThingEvent *)event->next;
       }
 
-      this->server.on((deviceBase + "/properties").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingPropertiesGet,
-                                this, std::placeholders::_1,
-                                device->firstProperty));
-      this->server.on((deviceBase + "/actions").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingActionsGet, this,
-                                std::placeholders::_1, device));
-      this->server.on((deviceBase + "/actions").c_str(), HTTP_POST,
-                      std::bind(&WebThingAdapter::handleThingActionsPost, this,
-                                std::placeholders::_1, device),
-                      NULL,
-                      std::bind(&WebThingAdapter::handleBody, this,
-                                std::placeholders::_1, std::placeholders::_2,
-                                std::placeholders::_3, std::placeholders::_4,
-                                std::placeholders::_5));
-      this->server.on((deviceBase + "/events").c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThingEventsGet, this,
-                                std::placeholders::_1, device));
-      this->server.on(deviceBase.c_str(), HTTP_GET,
-                      std::bind(&WebThingAdapter::handleThing, this,
-                                std::placeholders::_1, device));
+      // this->server.on((deviceBase + "/properties").c_str(), HTTP_GET,
+      //                 std::bind(&WebThingAdapter::handleThingPropertiesGet,
+      //                           this, std::placeholders::_1,
+      //                           device->firstProperty));
+      // this->server.on((deviceBase + "/actions").c_str(), HTTP_GET,
+      //                 std::bind(&WebThingAdapter::handleThingActionsGet, this,
+      //                           std::placeholders::_1, device));
+      // this->server.on((deviceBase + "/actions").c_str(), HTTP_POST,
+      //                 std::bind(&WebThingAdapter::handleThingActionsPost, this,
+      //                           std::placeholders::_1, device),
+      //                 NULL,
+      //                 std::bind(&WebThingAdapter::handleBody, this,
+      //                           std::placeholders::_1, std::placeholders::_2,
+      //                           std::placeholders::_3, std::placeholders::_4,
+      //                           std::placeholders::_5));
+      // this->server.on((deviceBase + "/events").c_str(), HTTP_GET,
+      //                 std::bind(&WebThingAdapter::handleThingEventsGet, this,
+      //                           std::placeholders::_1, device));
+      // this->server.on(deviceBase.c_str(), HTTP_GET,
+      //                 std::bind(&WebThingAdapter::handleThing, this,
+      //                           std::placeholders::_1, device));
 
       device = device->next;
     }
@@ -157,7 +157,7 @@ public:
 
   void update() {
 #ifdef ESP8266
-    MDNS.update();
+    // MDNS.update();
 #endif
 #ifndef WITHOUT_WS
     // * Send changed properties as defined in "4.5 propertyStatus message"
@@ -185,11 +185,11 @@ public:
     device->ws = ws;
     // AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType
     // type, void * arg, uint8_t *data, size_t len, ThingDevice* device
-    ws->onEvent(std::bind(
-        &WebThingAdapter::handleWS, this, std::placeholders::_1,
-        std::placeholders::_2, std::placeholders::_3, std::placeholders::_4,
-        std::placeholders::_5, std::placeholders::_6, device));
-    this->server.addHandler(ws);
+    // ws->onEvent(std::bind(
+    //     &WebThingAdapter::handleWS, this, std::placeholders::_1,
+    //     std::placeholders::_2, std::placeholders::_3, std::placeholders::_4,
+    //     std::placeholders::_5, std::placeholders::_6, device));
+    // this->server.addHandler(ws);
 #endif
   }
 
@@ -335,7 +335,8 @@ private:
       String jsonStr;
       serializeJson(message, jsonStr);
       // Inform all connected ws clients of a Thing about changed properties
-      ((AsyncWebSocket *)device->ws)->textAll(jsonStr);
+      // [Qube] Update websocket clients here 
+      // ((AsyncWebSocket *)device->ws)->textAll(jsonStr);å
     }
   }
 #endif
@@ -372,7 +373,8 @@ private:
     }
 
     serializeJson(things, *response);
-    request->send(response);
+    // [Qube] Send this response object with thing td
+    // request->send(response);
   }
 
   void handleThing(AsyncWebServerRequest *request, ThingDevice *&device) {
@@ -387,7 +389,8 @@ private:
     device->serialize(descr, ip, port);
 
     serializeJson(descr, *response);
-    request->send(response);
+    // [Qube] Send this response object with thing td
+    // request->send(response);
   }
 
   void handleThingPropertyGet(AsyncWebServerRequest *request,
@@ -402,7 +405,8 @@ private:
     JsonObject prop = doc.to<JsonObject>();
     item->serializeValue(prop);
     serializeJson(prop, *response);
-    request->send(response);
+    // [Qube] Send this response object with thing td
+    // request->send(response);
   }
 
   void handleThingActionGet(AsyncWebServerRequest *request,
@@ -420,6 +424,7 @@ private:
       JsonArray queue = doc.to<JsonArray>();
       device->serializeActionQueue(queue, action->id);
       serializeJson(queue, *response);
+      // [Qube] Send this response object with thing td
       request->send(response);
     } else {
       String actionId = url.substring(base.length() + 1);
@@ -432,7 +437,8 @@ private:
 
       ThingActionObject *obj = device->findActionObject(actionId.c_str());
       if (obj == nullptr) {
-        request->send(404);
+        // [Qube] Send this 404 here
+        // request->send(404);
         return;
       }
 
@@ -442,7 +448,8 @@ private:
       JsonObject o = doc.to<JsonObject>();
       obj->serialize(o, device->id);
       serializeJson(o, *response);
-      request->send(response);
+      // [Qube] Send this response object with thing action
+      // request->send(response);
     }
   }
 
@@ -455,7 +462,8 @@ private:
     String url = request->url();
     String base = "/things/" + device->id + "/actions/" + action->id;
     if (url == base || url == base + "/") {
-      request->send(404);
+      // [Qube] Send 404 here
+      // request->send(404);
       return;
     }
 
@@ -468,7 +476,8 @@ private:
     }
 
     device->removeAction(actionId);
-    request->send(204);
+    // [Qube] Send 204 here and remove action from queue
+    // request->send(204);
   }
 
   void handleThingActionPost(AsyncWebServerRequest *request,
@@ -488,7 +497,8 @@ private:
     if (error) { // unable to parse json
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
-      request->send(500);
+      // [Qube] Send 500 here
+      // request->send(500);
       delete newBuffer;
       return;
     }
@@ -498,7 +508,8 @@ private:
     if (!newAction.containsKey(action->id)) {
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
-      request->send(400);
+      // [Qube] Send 400 here
+      // request->send(400);
       delete newBuffer;
       return;
     }
@@ -508,7 +519,8 @@ private:
     if (obj == nullptr) {
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
-      request->send(500);
+      // [Qube] Send 500 here
+      // request->send(500);
       delete newBuffer;
       return;
     }
@@ -525,7 +537,8 @@ private:
     serializeJson(item, jsonStr);
     AsyncWebServerResponse *response =
         request->beginResponse(201, "application/json", jsonStr);
-    request->send(response);
+        // [Qube] Send this response object with thing action
+    // request->send(response);
 
     b_has_body_data = false;
     memset(body_data, 0, sizeof(body_data));
@@ -545,7 +558,8 @@ private:
     JsonArray queue = doc.to<JsonArray>();
     device->serializeEventQueue(queue, item->id);
     serializeJson(queue, *response);
-    request->send(response);
+    // [Qube] Send this response object with thing td
+    // request->send(response);
   }
 
   void handleThingPropertiesGet(AsyncWebServerRequest *request,
@@ -564,7 +578,8 @@ private:
       item = item->next;
     }
     serializeJson(prop, *response);
-    request->send(response);
+    // [Qube] Send this response object with thing td
+    // request->send(response);
   }
 
   void handleThingActionsGet(AsyncWebServerRequest *request,
@@ -579,7 +594,8 @@ private:
     JsonArray queue = doc.to<JsonArray>();
     device->serializeActionQueue(queue);
     serializeJson(queue, *response);
-    request->send(response);
+    // [Qube] Send this response object with thing td
+    // request->send(response);
   }
 
   void handleThingActionsPost(AsyncWebServerRequest *request,
@@ -599,7 +615,8 @@ private:
     if (error) { // unable to parse json
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
-      request->send(500);
+      // [Qube] Send 500 here
+      // request->send(500);
       delete newBuffer;
       return;
     }
@@ -609,7 +626,8 @@ private:
     if (newAction.size() != 1) {
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
-      request->send(400);
+      // [Qube] Send 400 here
+      // request->send(400);
       delete newBuffer;
       return;
     }
@@ -619,7 +637,8 @@ private:
     if (obj == nullptr) {
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
-      request->send(500);
+      // [Qube] Send 500 here
+      // request->send(500);
       delete newBuffer;
       return;
     }
@@ -636,6 +655,7 @@ private:
     serializeJson(item, jsonStr);
     AsyncWebServerResponse *response =
         request->beginResponse(201, "application/json", jsonStr);
+    // [Qube] Send this response object with thing action
     request->send(response);
 
     b_has_body_data = false;
@@ -656,7 +676,8 @@ private:
     JsonArray queue = doc.to<JsonArray>();
     device->serializeEventQueue(queue);
     serializeJson(queue, *response);
-    request->send(response);
+    // [Qube] Send this response object with thing td
+    // request->send(response);
   }
 
   void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len,
@@ -685,7 +706,8 @@ private:
     if (error) { // unable to parse json
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
-      request->send(500);
+      // [Qube] Send this response object with thing td
+      // request->send(500);
       return;
     }
     JsonObject newProp = newBuffer.as<JsonObject>();
@@ -693,7 +715,8 @@ private:
     if (!newProp.containsKey(property->id)) {
       b_has_body_data = false;
       memset(body_data, 0, sizeof(body_data));
-      request->send(400);
+      // [Qube] Send 400 here
+      // request->send(400);
       return;
     }
 
@@ -702,7 +725,8 @@ private:
     AsyncResponseStream *response =
         request->beginResponseStream("application/json");
     serializeJson(newProp, *response);
-    request->send(response);
+    // [Qube] Send this response object with thing td
+    // request->send(response);
 
     b_has_body_data = false;
     memset(body_data, 0, sizeof(body_data));
