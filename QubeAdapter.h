@@ -184,6 +184,7 @@ class QubeAdapter {
             String jsonStr;
             serializeJson(message, jsonStr);
             Serial.println("Soemthing changed");
+            Serial.println(jsonStr);
             // Inform all connected ws clients of a Thing about changed properties
             // ((AsyncWebSocket *)device->ws)->textAll(jsonStr);
         }
@@ -191,13 +192,12 @@ class QubeAdapter {
 
 
     // This is function is callback for `/things`
-    JsonArray handleThings(){
+    String handleThings(){
         /* 
             This function has @param AsyncWebServerRequest *request
             but as we will call this function directly we dont need to
             pass this request object.
         */
-
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray things = buf.to<JsonArray>();
         ThingDevice *device = this->firstDevice;
@@ -205,33 +205,34 @@ class QubeAdapter {
             JsonObject descr = things.createNestedObject();
             device->serialize(descr, ip, port);
             descr["href"] = "/things/" + device->id;
-            device = device->next;
-            Serial.println("Going to print descr : ");
-            Serial.println(descr);
+            device = device->next;   
         }
-
-        // TODO - Return this `JsonArray things` to the client.
-        return things;
+        String jsonStr;
+        serializeJson(things, jsonStr);
+        return jsonStr;
     }
 
     // This is function is callback for `/things/{thingId}`
-    void handleThing(ThingDevice *&device) {
+    String handleThing() {
 
+        ThingDevice *device = this->firstDevice;
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject descr = buf.to<JsonObject>();
         device->serialize(descr, ip, port);
-
-        // TODO - Return this `JsonObject descr` to the client.
-    }
+        String jsonStr;
+        serializeJson(descr, jsonStr);
+        return jsonStr;
+    }   
 
     // This is function is callback for GET `/things/{thingId}/properties`
-    void handleThingPropertyGet(){
+    String handleThingPropertyGet(){
         ThingItem *item = this->firstDevice->firstProperty;
         DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
         item->serializeValue(prop);
-
-        // TODO - Return this `JsonObject prop` to the client.
+        String jsonStr;
+        serializeJson(prop, jsonStr);
+        return jsonStr;
     }
 
     // This is function is callback for GET `/things/{thingId}/actions`
