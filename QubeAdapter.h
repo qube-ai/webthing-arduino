@@ -214,7 +214,6 @@ class QubeAdapter {
 
     // This is function is callback for `/things/{thingId}`
     String handleThing() {
-
         ThingDevice *device = this->firstDevice;
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject descr = buf.to<JsonObject>();
@@ -236,34 +235,84 @@ class QubeAdapter {
     }
 
     // This is function is callback for GET `/things/{thingId}/actions`
-    void handleThingActionGet(ThingDevice *device, ThingAction *action){
-
+    String handleThingActionGet(){
+        ThingDevice *device = this->firstDevice;
+        ThingAction *action = this->firstDevice->firstAction;
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeActionQueue(queue, action->id);
-        
-        // TODO - Return this `JsonArray queue` to the client.
+        String jsonStr;
+        serializeJson(queue, jsonStr);
+        return jsonStr;
     }
 
     // Add action delete method here
-    void handleThingActionDelete(){
-        // TODO - Delete the action from the queue.
+    void handleThingActionDelete(String actionId){
+        ThingDevice *device = this->firstDevice;
+        ThingAction *action = this->firstDevice->firstAction;
+        device->removeAction(actionId);
     }
 
     // This is function is callback for POST `/things/{thingId}/actions/{actionId}`
-    void handleThingActionPost(){
-        // TODO - Add the action to the queue.
+    void handleThingActionPost(const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
 
+        /*
+            This function takes a callback function as parameter.
+            The function should be like this :
+                void notify_fn(ThingActionObject *actionObject){
+                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+                    message["messageType"] = "actionStatus";
+                    JsonObject prop = message.createNestedObject("data");
+                    action->serialize(prop, id);
+                    String jsonStr;
+                    serializeJson(message, jsonStr);
+                } 
+        */
+       ThingDevice *device = this->firstDevice;
+        DynamicJsonDocument *newBuffer =
+        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
+        auto error = deserializeJson(*newBuffer, newActionData);
+        if (error) {
+            // send error as response
+            Serial.print(F("[handleThingActionPost()] deserializeJson() failed with code "));
+            Serial.println(error.c_str());
+            return;
+        }
+        JsonObject newAction = newBuffer->as<JsonObject>();
+
+        ThingActionObject *obj = device->requestAction(newBuffer);
+        if (obj == nullptr) {
+            // Send error as response
+            Serial.println(F("[handleThingActionPost()] requestAction() failed. Obj was nullptr."));
+            delete newBuffer;
+            return;
+        }
+
+        obj->setNotifyFunction(notify_fn_);
+
+        DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
+        JsonObject item = respBuffer.to<JsonObject>();
+        obj->serialize(item, device->id);
+        String jsonStr;
+        serializeJson(item, jsonStr);
+        obj->start();
     }
 
 
     // This is function is callback for GET `/things/{thingId}/events`
-    void handleThingEventGet(){
-        // TODO - Return the event queue to the client.
+    String handleThingEventGet(){
+        ThingDevice *device = this->firstDevice;
+        ThingItem *item = this->firstDevice->firstEvent;
+        DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+        JsonArray queue = doc.to<JsonArray>();
+        device->serializeEventQueue(queue, item->id);
+        String jsonStr;
+        serializeJson(queue, jsonStr);
+        return jsonStr;
     }
 
     // This is function is callback for GET `/things/{thingId}/properties/{propertyId}`
-    void handleThingPropertiesGet(){
+    String handleThingPropertiesGet(){
 
         /* 
             - This function has @param `ThingItem *rootItem` which i do not
@@ -294,24 +343,76 @@ class QubeAdapter {
             item->serializeValue(prop);
             item = item->next;
         }
-
-        // TODO - Return this `JsonObject prop` to the client.
+        String jsonStr;
+        serializeJson(prop, jsonStr);
+        return jsonStr;
     }
 
 
-    // This is function is callback for GET `/things/{thingId}/actions`
-    void handleThingActionsGet(ThingDevice *device){
-        // TODO - Return the action queue to the client.
-
+    // This is function is callback for POST `/things/{thingId}/actions`
+    String handleThingActionsGet(){
+        ThingDevice *device = this->firstDevice;
+        DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+        JsonArray queue = doc.to<JsonArray>();
+        device->serializeActionQueue(queue);
+        String jsonStr;
+        serializeJson(queue, jsonStr);
+        return jsonStr;
     }
 
     // This is function is callback for POST `/things/{thingId}/actions`
-    void handleThingActionsPost(){
-        // TODO - perform some action
+    void handleThingActionsPost(const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
+        /*
+            This function takes a callback function as parameter.
+            The function should be like this :
+                void notify_fn(ThingActionObject *actionObject){
+                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+                    message["messageType"] = "actionStatus";
+                    JsonObject prop = message.createNestedObject("data");
+                    action->serialize(prop, id);
+                    String jsonStr;
+                    serializeJson(message, jsonStr);
+                } 
+        */
+
+       ThingDevice *device = this->firstDevice;
+        DynamicJsonDocument *newBuffer =
+        new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
+        auto error = deserializeJson(*newBuffer, newActionData);
+        if (error) {
+            // send error as response
+            Serial.print(F("[handleThingActionPost()] deserializeJson() failed with code "));
+            Serial.println(error.c_str());
+            return;
+        }
+        JsonObject newAction = newBuffer->as<JsonObject>();
+
+        ThingActionObject *obj = device->requestAction(newBuffer);
+        if (obj == nullptr) {
+            // Send error as response
+            Serial.println(F("[handleThingActionPost()] requestAction() failed. Obj was nullptr."));
+            delete newBuffer;
+            return;
+        }
+
+        obj->setNotifyFunction(notify_fn_);
+
+        DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
+        JsonObject item = respBuffer.to<JsonObject>();
+        obj->serialize(item, device->id);
+        String jsonStr;
+        serializeJson(item, jsonStr);
+        obj->start();
     }
 
-    void handleThingEventsGet(ThingDevice *device) {
-        // TODO - Return the event queue to the client.
+    String handleThingEventsGet() {
+        ThingDevice *device = this->firstDevice;
+        DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+        JsonArray queue = doc.to<JsonArray>();
+        device->serializeEventQueue(queue);
+        String jsonStr;
+        serializeJson(queue, jsonStr);
+        return jsonStr;
     }
 
     // This function was used to call handleBody for all requests
@@ -378,8 +479,6 @@ class QubeAdapter {
 
         JsonObject newProp = newBuffer.as<JsonObject>();
         device->setProperty(property->id.c_str(), newProp[property->id]);
-        Serial.println("Property PUT request V2 completed");
-        Serial.println(newPropertyData);
     }
 
 };
