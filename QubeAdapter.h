@@ -53,7 +53,7 @@ class QubeAdapter {
     bool b_has_body_data = false;
 
 
-    ThingDevice *findDeviceById(String id){
+    ThingDevice* findDeviceById(String id){
         ThingDevice *device = this->firstDevice;
         while(device != nullptr){
             if(device->id == id){
@@ -70,7 +70,7 @@ class QubeAdapter {
             if(property->id == id){
                 return property;
             }
-            property = property->next;
+            property = (ThingProperty *)property->next;
         }
         return nullptr;
     }
@@ -81,7 +81,7 @@ class QubeAdapter {
             if(action->id == id){
                 return action;
             }
-            action = action->next;
+            action = (ThingAction *)action->next;
         }
         return nullptr;
     }
@@ -92,7 +92,7 @@ class QubeAdapter {
             if(event->id == id){
                 return event;
             }
-            event = event->next;
+            event = (ThingEvent *)event->next;
         }
         return nullptr;
     }
@@ -259,11 +259,13 @@ class QubeAdapter {
         return jsonStr;
     }
 
-    ThingDevice 
-
     // This is function is callback for `/things/{thingId}`
-    String handleThing() {
-        ThingDevice *device = this->firstDevice;
+    String handleThing(String thingId) {
+
+        ThingDevice *device = findDeviceById(thingId);
+        if (device == nullptr) {
+            return "error";
+        }
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject descr = buf.to<JsonObject>();
         device->serialize(descr, ip, port);
@@ -273,8 +275,16 @@ class QubeAdapter {
     }   
 
     // This is function is callback for GET `/things/{thingId}/properties`
-    String handleThingPropertyGet(){
-        ThingItem *item = this->firstDevice->firstProperty;
+    String handleThingPropertyGet(String thingId, String propertyId) {
+
+        ThingDevice *device = findDeviceById(thingId);
+        if (device == nullptr) {
+            return "error";
+        }
+        ThingItem *item = findPropertyById(device, propertyId);
+        if (item == nullptr) {
+            return "item-error";
+        }
         DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
         item->serializeValue(prop);
@@ -284,9 +294,15 @@ class QubeAdapter {
     }
 
     // This is function is callback for GET `/things/{thingId}/actions/{actionId}`
-    String handleThingActionGet(){
-        ThingDevice *device = this->firstDevice;
-        ThingAction *action = this->firstDevice->firstAction;
+    String handleThingActionGet(String thingId, String actionId) {
+        ThingDevice *device = findDeviceById(thingId);
+        if (device == nullptr) {
+            return "error";
+        }
+        ThingAction *action = findActionById(device, actionId);
+        if (action == nullptr) {
+            return "action-error";
+        }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeActionQueue(queue, action->id);
@@ -296,12 +312,17 @@ class QubeAdapter {
     }
 
     // Add action delete method here
-    void handleThingActionDelete(ThingDevice *device, String actionId){
+    void handleThingActionDelete(String thingId, String actionId){
+        
+        ThingDevice *device = findDeviceById(thingId);
+        if (device == nullptr) {
+            return;
+        }
         device->removeAction(actionId);
     }
 
     // This is function is callback for POST `/things/{thingId}/actions/{actionId}`
-    void handleThingActionPost(const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
+    void handleThingActionPost(String thingId, const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
 
         /*
             This function takes a callback function as parameter.
@@ -315,7 +336,10 @@ class QubeAdapter {
                     serializeJson(message, jsonStr);
                 } 
         */
-       ThingDevice *device = this->firstDevice;
+        ThingDevice *device = findDeviceById(thingId);
+        if (device == nullptr) {
+            return;
+        }
         DynamicJsonDocument *newBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
         auto error = deserializeJson(*newBuffer, newActionData);
@@ -346,9 +370,15 @@ class QubeAdapter {
     }
 
     // This is function is callback for GET `/things/{thingId}/events/{eventId}`
-    String handleThingEventGet(){
-        ThingDevice *device = this->firstDevice;
-        ThingItem *item = this->firstDevice->firstEvent;
+    String handleThingEventGet(String thingId, String eventId){
+        ThingDevice *device = findDeviceById(thingId);
+        if (device == nullptr) {
+            return "error";
+        }
+        ThingItem *item = findEventById(device, eventId);
+        if (item == nullptr) {
+            return "item-error";
+        }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeEventQueue(queue, item->id);
@@ -358,30 +388,11 @@ class QubeAdapter {
     }
 
     // This is function is callback for GET `/things/{thingId}/properties`
-    String handleThingPropertiesGet(){
-
-        /* 
-            - This function has @param `ThingItem *rootItem` which i do not
-            understand. In the callback above  `*property` is passed.
-
-            In in ESPWebThingAdapter.h
-
-            param property is defined on line 84 :
-            ThingDevice *device = this->firstDevice;
-
-            and on line 87  the callback is defined:
-            """
-            (propertyBase.c_str(), HTTP_GET,
-                        std::bind(&WebThingAdapter::handleThingPropertyGet,
-                                  this, std::placeholders::_1, property))
-            """ 
-
-            Thus i can use that to create a ThingItem inside the function
-            body and should still point to the same object. Like this:
-            ThingItem *item = device->firstProperty; 
-        */
-
-        ThingItem *rootItem = this->firstDevice->firstProperty;
+    String handleThingPropertiesGet(String thingId){
+        ThingItem *rootItem = findDeviceById(thingId)->firstProperty;
+        if (rootItem == nullptr) {
+            return "error";
+        }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
         ThingItem *item = rootItem;
@@ -395,8 +406,11 @@ class QubeAdapter {
     }
 
     // This is function is callback for POST `/things/{thingId}/actions`
-    String handleThingActionsGet(){
-        ThingDevice *device = this->firstDevice;
+    String handleThingActionsGet(String thingId){
+        ThingDevice *device = findDeviceById(thingId);
+        if (device == nullptr) {
+            return "error";
+        }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeActionQueue(queue);
@@ -406,7 +420,7 @@ class QubeAdapter {
     }
 
     // This is function is callback for POST `/things/{thingId}/actions`
-    void handleThingActionsPost(const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
+    void handleThingActionsPost(String thingId, const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
         /*
             This function takes a callback function as parameter.
             The function should be like this :
@@ -420,7 +434,10 @@ class QubeAdapter {
                 } 
         */
 
-       ThingDevice *device = this->firstDevice;
+       ThingDevice *device = findDeviceById(thingId);
+       if (device == nullptr) {
+            return "error";
+        }
         DynamicJsonDocument *newBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
         auto error = deserializeJson(*newBuffer, newActionData);
@@ -451,8 +468,11 @@ class QubeAdapter {
     }
 
     // This is function is callback for GET `/things/{thingId}/events`
-    String handleThingEventsGet() {
-        ThingDevice *device = this->firstDevice;
+    String handleThingEventsGet(String thingId) {
+        ThingDevice *device = findDeviceById(thingId);
+        if (device == nullptr) {
+            return "error";
+        }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeEventQueue(queue);
@@ -513,7 +533,17 @@ class QubeAdapter {
         memset(body_data, 0, sizeof(body_data));
     }
 
-    void handleThingPropertyPutV2(ThingDevice *device, ThingProperty *property, const char *newPropertyData){
+    void handleThingPropertyPutV2(String thingId, String propertyId, const char *newPropertyData){
+
+
+        ThingDevice *device = findDeviceById(thingId);
+        if (device == nullptr) {
+            return;
+        }
+        ThingProperty *property = findPropertyById(propertyId);
+        if (property == nullptr) {
+            return;
+        }
         DynamicJsonDocument newBuffer(SMALL_JSON_DOCUMENT_SIZE);
         auto error = deserializeJson(newBuffer, newPropertyData);
 
