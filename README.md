@@ -32,21 +32,12 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 ## Message Schema
 ![Schema](https://img.shields.io/badge/Schema-Qube%20Things-blue.svg)
 
-- Get Property
-```json
-{
-  "messageType": "getProperty",
-  "thingId": "thingId",
-  "id": "1", 
-}
-```
-
-- Set Property
+- Set Property. `The setProperty message type is sent from a web client to a Web Thing in order to set the value of one or more of its properties. This is equivalent to a PUT request on a Property resource URL using the REST API, but with the WebSocket API a property value can be changed multiple times in quick succession over an open socket and multiple properties can be set at the same time.`
 ```json
 {
   "messageType": "setProperty",
   "thingId": "thingId",
-  "id": "2",
+  "id": "1",
   "data": {
     "propertyId": "propertyId",
     "newValue": "newValue",
@@ -54,77 +45,45 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 }
 ```
 
-- Get Action Queue
+- Get Action Request.
+`The requestAction message type is sent from a web client to a Web Thing to request an action be carried out on a Web Thing. This is equivalent to a POST request on an Actions resource URL using the REST API, but multiple actions can be requested at the same time or in quick succession over an open socket.`
 ```json
 {
   "thingId": "thingId",
-  "messageType": "getActionQueue",
-  "id": "3",
-}
-```
-
-- Set Action Queue
-```json
-{
-  "messageType": "setActionQueue",
-  "thingId": "thingId",
-  "id": "4",
+  "messageType": "getActionRequest",
+  "id": "2",
   "data": {
     "actionId": "actionId",
-    "newValue": "newValue",
+    "params": {
+      "param1": "param1",
+      "param2": "param2",
+    }
   }
 }
 ```
 
-- Get Event Queue
-```json
-{
-  "thingId": "thingId",
-  "messageType": "getEventQueue",
-  "id": "5",
-}
-```
-
-- Get All Properties
-```json
-{
-  "thingId": "thingId",
-  "messageType": "getAllProperties",
-  "id": "6",
-}
-```
-
-- Get All Actions
-```json
-{
-  "thingId": "thingId",
-  "messageType": "getAllActions",
-  "id": "7",
-}
-```
-
-- Get All Events
-```json
-{
-  "thingId": "thingId",
-  "messageType": "getAllEvents",
-  "id": "8",
-}
-```
-
-- Get thing description
+- Get thing description. `The getThingDescription message type is sent from a web client to a Web Thing to request the description of a Web Thing. This is equivalent to a GET request on a Thing resource URL using the REST API. This will give you the thingDescription of the provided thingId.`
 ```json
 {
   "thingId": "thingId",
   "messageType": "getThingDescription",
-  "id": "9",
+  "id": "3",
 }
 ```
 
-- Get All Things
+- Get All Things. `The getThingDescription message type is sent from a web client to a Web Thing to request the description of a Web Thing. This is equivalent to a GET request on a Thing resource URL using the REST API. This will give you the thingDescription of the all things.`
 ```json
 {
   "messageType": "getAllThings",
-  "id": "10",
+  "id": "4",
+}
+```
+
+- Get Property. `This will give the value of the propertyId of the provided thingId.`
+```json
+{
+  "messageType": "getProperty",
+  "thingId": "thingId",
+  "id": "5", 
 }
 ```
