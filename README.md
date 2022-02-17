@@ -87,3 +87,42 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
   "id": "5", 
 }
 ```
+
+### Message sent by the Web Thing to the Web Client
+
+- Property Status. `The propertyStatus message type is sent from a Web Thing to a web client whenever a property of a Web Thing changes. The payload data of this message is in the same format as a response to a GET request on Property resource using the REST API, but the message is pushed to the client whenever a property changes and can include multiple properties at the same time.`
+```json
+{
+  "messageType": "propertyStatus",
+  "data": {
+    "led": true
+  }
+}
+```
+
+- Action Status. `The actionStatus message type is sent from a Web Thing to a web client when the status of a requested action changes. The payload data is consistent with the format of an Action resource in the REST API, but messages are pushed to the client as soon as the status of an action changes.`
+```json
+{
+  "messageType": "actionStatus",
+  "data": {
+    "grab": {
+      "href": "/actions/grab/123e4567-e89b-12d3-a456-426655",
+      "status": "completed",
+      "timeRequested": "2017-01-24T11:02:45+00:00",
+      "timeCompleted": "2017-01-24T11:02:46+00:00"
+    }
+  }
+}
+```
+
+- Event. `The event message type is sent from a Web Thing to a web client when an event occurs on the Web Thing. The payload data is consistent with the format of an Event resource in the REST API but messages are pushed to the client as soon as an event occurs.`
+```json
+{
+  "messageType": "event",
+  "data": {
+    "motion": {
+      "timestamp": "2017-01-24T13:02:45+00:00"
+    }
+  }
+}
+```
