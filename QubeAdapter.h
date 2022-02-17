@@ -7,6 +7,7 @@
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include "Thing.h"
+#include <WebSocketsClient.h>
 
 #define ESP_MAX_PUT_BODY_SIZE 512
 
@@ -29,29 +30,69 @@
 class QubeAdapter {
 
     public:
-
-    // Constructor
     QubeAdapter(String _name, IPAddress _ip, uint16_t _port = 80,
                   bool _disableHostValidation = false)
       : name(_name), ip(_ip.toString()), port(_port),
         disableHostValidation(_disableHostValidation) {}
     
     String name;
-
-    /******* Even though we don't need these variables, but to 
-     be compatible with Thing.h we'll use this. *******/
     String ip;
     uint16_t port;
-    /*********************/
-
     bool disableHostValidation;
     ThingDevice *firstDevice = nullptr;
     ThingDevice *lastDevice = nullptr;
-    // Here all the body data in PUT and POST requests are stored.
     char body_data[ESP_MAX_PUT_BODY_SIZE];
-    // If we fill above buffer this flag will be set to true.
     bool b_has_body_data = false;
+    WebSocketsClient webSocket;
 
+
+
+    void payloadHandler(uint8_t *payload, size_t length)
+    {
+        Serial.printf("Got payload -> %s\n", payload);
+        char msgch[length];
+        for (unsigned int i = 0; i < length; i++)
+        {
+            msgch[i] = ((char)payload[i]);
+        }
+        msgch[length] = '\0';
+        // Parse Json
+        StaticJsonDocument<200> doc;
+        DeserializationError error = deserializeJson(doc, msgch);
+        if (error)
+        {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.c_str());
+            return;
+        }
+        else
+        {
+            Serial.println("Parsed JSON");
+            Serial.println(doc.as<String>());
+        }
+    }
+
+    void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
+    {
+        switch (type)
+        {
+        case WStype_DISCONNECTED:
+            Serial.printf("[WSc] Disconnected!\n");
+            break;
+
+        case WStype_CONNECTED:
+            Serial.printf("[WSc] Connected to url: %s\n", payload);
+            break;
+
+        case WStype_TEXT:
+            payloadHandler(payload, length);
+            break;
+
+        case WS_EVT_DATA:
+            Serial.printf("[WSc] get binary length: %u\n", length);
+            break;
+        }
+}
 
     ThingDevice* findDeviceById(String id){
         ThingDevice *device = this->firstDevice;
@@ -97,80 +138,15 @@ class QubeAdapter {
         return nullptr;
     }
 
-
     // Begin method
-    void begin(){
+    void begin(String websocketUrl, unint8_t websocketPort){
 
        // TODO - I don't fully understand this logic.
        ThingDevice *device  = this->firstDevice;
-
-         while(device != nullptr){
-             
-             // Create an endpoint with /things/{thingId}
-            String deviceBase = "/things/" + device->id;
-            ThingProperty *property = device->firstProperty;
-
-            while (property != nullptr) {
-                String propertyBase = deviceBase + "/properties/" + property->id;
-                /* 
-                    Here attach some callbacks to the endpoints. Since we are not using servers we will call these callbacks directly.
-                    2 Callbacks are to be attached:
-                        - GET : handleThingPropertyGet()
-                        - PUT : handleThingPropertyPut()
-                        To obtain body for put method use:
-                            handleBody()
-                */
-
-               property = (ThingProperty *)property->next;
-            }
-
-            ThingAction *action = device->firstAction;
-            while (action != nullptr) {
-                String actionBase = deviceBase + "/actions/" + action->id;
-                /* 
-                    Here attach some callbacks to the endpoints. Since we are not using servers we will call these callbacks directly.
-                    2 Callbacks are to be attached:
-                        - POST : handleThingActionPost()
-                        - GET : handleThingActionGet()
-                        To obtain body for post method use:
-                            handleBody()
-                        - DELETE : handleThingActionDelete()
-                */
-
-                action = (ThingAction *)action->next;
-            }
-
-            ThingEvent *event = device->firstEvent;
-            while (event != nullptr) {
-                String eventBase = deviceBase + "/events/" + event->id;
-                /* 
-                    Here attach some callbacks to the endpoints. Since we are not using servers we will call these callbacks directly.
-                    2 Callbacks are to be attached:
-                        - GET : handleThingEventGet()
-                */
-
-                event = (ThingEvent *)event->next;
-            }
-
-            /* 
-                Here attach callbacks for getting all thingDescription, actions, properties and events.
-                Since we are not using servers we will call these callbacks directly.
-                5 Callbacks to be attached to:
-                    - GET : handleThingPropertiesGet() => /things/{thingId}/properties
-                    - GET : handleThingActionsGet() => /things/{thingId}/actions
-                    - POST : handleThingActionsPost() => /things/{thingId}/actions
-                        To obtain body for post method use:
-                            - handleBody()
-                    - GET : handleThingEventsGet() => /things/{thingId}/events
-                    - GET : handleThing() => /things/{thingId} : To get thingDescription
-            **/
-
-           device = device->next;
-
-         }
-
-         // Here start the server
-
+        // server address, port and URL
+        webSocket.begin(websocketUrl, websocketPort);
+        // event handler
+        webSocket.onEvent(webSocketEvent);
     }
 
     // Update method
@@ -237,14 +213,8 @@ class QubeAdapter {
         }
     }
 
-
     // This is function is callback for `/things`
-    String handleThings(){
-        /* 
-            This function has @param AsyncWebServerRequest *request
-            but as we will call this function directly we dont need to
-            pass this request object.
-        */
+    void handleThings(){
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray things = buf.to<JsonArray>();
         ThingDevice *device = this->firstDevice;
@@ -256,11 +226,11 @@ class QubeAdapter {
         }
         String jsonStr;
         serializeJson(things, jsonStr);
-        return jsonStr;
+        webSocket.sendTXT(jsonStr);
     }
 
     // This is function is callback for `/things/{thingId}`
-    String handleThing(String thingId) {
+    void handleThing(String thingId) {
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
@@ -271,11 +241,11 @@ class QubeAdapter {
         device->serialize(descr, ip, port);
         String jsonStr;
         serializeJson(descr, jsonStr);
-        return jsonStr;
+        webSocket.sendTXT(jsonStr);
     }   
 
     // This is function is callback for GET `/things/{thingId}/properties`
-    String handleThingPropertyGet(String thingId, String propertyId) {
+    void handleThingPropertyGet(String thingId, String propertyId) {
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
@@ -290,11 +260,11 @@ class QubeAdapter {
         item->serializeValue(prop);
         String jsonStr;
         serializeJson(prop, jsonStr);
-        return jsonStr;
+        websocket.sendTXT(jsonStr);
     }
 
     // This is function is callback for GET `/things/{thingId}/actions/{actionId}`
-    String handleThingActionGet(String thingId, String actionId) {
+    void handleThingActionGet(String thingId, String actionId) {
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             return "error";
@@ -308,10 +278,10 @@ class QubeAdapter {
         device->serializeActionQueue(queue, action->id);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        return jsonStr;
+        rwebsocket.sendTXT(jsonStr);
     }
 
-    // Add action delete method here
+    // Delete action from queue
     void handleThingActionDelete(String thingId, String actionId){
         
         ThingDevice *device = findDeviceById(thingId);
@@ -321,7 +291,7 @@ class QubeAdapter {
         device->removeAction(actionId);
     }
 
-    // This is function is callback for POST `/things/{thingId}/actions/{actionId}`
+    // This function is callback for POST `/things/{thingId}/actions/{actionId}`
     void handleThingActionPost(String thingId, const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
 
         /*
@@ -369,8 +339,8 @@ class QubeAdapter {
         obj->start();
     }
 
-    // This is function is callback for GET `/things/{thingId}/events/{eventId}`
-    String handleThingEventGet(String thingId, String eventId){
+    // This function is callback for GET `/things/{thingId}/events/{eventId}`
+    void handleThingEventGet(String thingId, String eventId){
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             return "error";
@@ -384,14 +354,14 @@ class QubeAdapter {
         device->serializeEventQueue(queue, item->id);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        return jsonStr;
+        websocket.sendTXT(jsonStr);
     }
 
-    // This is function is callback for GET `/things/{thingId}/properties`
-    String handleThingPropertiesGet(String thingId){
+    // This function is callback for GET `/things/{thingId}/properties`
+    void handleThingPropertiesGet(String thingId){
         ThingItem *rootItem = findDeviceById(thingId)->firstProperty;
         if (rootItem == nullptr) {
-            return "error";
+            websocket.sendTXT("400");
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
@@ -402,24 +372,24 @@ class QubeAdapter {
         }
         String jsonStr;
         serializeJson(prop, jsonStr);
-        return jsonStr;
+        websocket.sendTXT(jsonStr);
     }
 
-    // This is function is callback for POST `/things/{thingId}/actions`
-    String handleThingActionsGet(String thingId){
+    // This function is callback for POST `/things/{thingId}/actions`
+    void handleThingActionsGet(String thingId){
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            return "error";
+            websocket.sendTXT("400");
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeActionQueue(queue);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        return jsonStr;
+        websocket.sendTXT(jsonStr);
     }
 
-    // This is function is callback for POST `/things/{thingId}/actions`
+    // This function is callback for POST `/things/{thingId}/actions`
     void handleThingActionsPost(String thingId, const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
         /*
             This function takes a callback function as parameter.
@@ -436,7 +406,7 @@ class QubeAdapter {
 
        ThingDevice *device = findDeviceById(thingId);
        if (device == nullptr) {
-            return "error";
+            websocket.sendTXT("400");
         }
         DynamicJsonDocument *newBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
@@ -454,7 +424,7 @@ class QubeAdapter {
             // Send error as response
             Serial.println(F("[handleThingActionPost()] requestAction() failed. Obj was nullptr."));
             delete newBuffer;
-            return;
+            websocket.sendTXT("400");
         }
 
         obj->setNotifyFunction(notify_fn_);
@@ -465,9 +435,10 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(item, jsonStr);
         obj->start();
+        websocket.sendTXT(jsonStr);
     }
 
-    // This is function is callback for GET `/things/{thingId}/events`
+    // This function is callback for GET `/things/{thingId}/events`
     String handleThingEventsGet(String thingId) {
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
@@ -478,7 +449,7 @@ class QubeAdapter {
         device->serializeEventQueue(queue);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        return jsonStr;
+        websocket.sendTXT(jsonStr);
     }
 
     // This function was used to call handleBody for all requests
@@ -492,7 +463,7 @@ class QubeAdapter {
     }
 
     // Most important, Most used function.
-    // This is function is callback for PUT `/things/{thingId}/properties/{propertyId}`
+    // This function is callback for PUT `/things/{thingId}/properties/{propertyId}`
     void handleThingPropertyPut(ThingDevice *device, ThingProperty *property){
         DynamicJsonDocument newBuffer(SMALL_JSON_DOCUMENT_SIZE);
         auto error = deserializeJson(newBuffer, body_data);
@@ -555,6 +526,9 @@ class QubeAdapter {
 
         JsonObject newProp = newBuffer.as<JsonObject>();
         device->setProperty(property->id.c_str(), newProp[property->id]);
+        String jsonStr;
+        serializeJson(newProp, jsonStr);
+        websocket.sendTXT(jsonStr);
     }
 
 };
