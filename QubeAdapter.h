@@ -1,5 +1,7 @@
 #pragma once
 
+#define ESP32 1
+
 #if defined(ESP32) || defined(ESP8266)
 
 #include <ArduinoJson.h>
@@ -49,6 +51,51 @@ class QubeAdapter {
     char body_data[ESP_MAX_PUT_BODY_SIZE];
     // If we fill above buffer this flag will be set to true.
     bool b_has_body_data = false;
+
+
+    ThingDevice *findDeviceById(String id){
+        ThingDevice *device = this->firstDevice;
+        while(device != nullptr){
+            if(device->id == id){
+                return device;
+            }
+            device = device->next;
+        }
+        return nullptr;
+    }
+
+    ThingProperty *findPropertyById(ThingDevice *device, String id){
+        ThingProperty *property = device->firstProperty;
+        while(property != nullptr){
+            if(property->id == id){
+                return property;
+            }
+            property = property->next;
+        }
+        return nullptr;
+    }
+
+    ThingAction *findActionById(ThingDevice *device, String id){
+        ThingAction *action = device->firstAction;
+        while(action != nullptr){
+            if(action->id == id){
+                return action;
+            }
+            action = action->next;
+        }
+        return nullptr;
+    }
+
+    ThingEvent *findEventById(ThingDevice *device, String id){
+        ThingEvent *event = device->firstEvent;
+        while(event != nullptr){
+            if(event->id == id){
+                return event;
+            }
+            event = event->next;
+        }
+        return nullptr;
+    }
 
 
     // Begin method
@@ -212,6 +259,8 @@ class QubeAdapter {
         return jsonStr;
     }
 
+    ThingDevice 
+
     // This is function is callback for `/things/{thingId}`
     String handleThing() {
         ThingDevice *device = this->firstDevice;
@@ -234,7 +283,7 @@ class QubeAdapter {
         return jsonStr;
     }
 
-    // This is function is callback for GET `/things/{thingId}/actions`
+    // This is function is callback for GET `/things/{thingId}/actions/{actionId}`
     String handleThingActionGet(){
         ThingDevice *device = this->firstDevice;
         ThingAction *action = this->firstDevice->firstAction;
@@ -247,9 +296,7 @@ class QubeAdapter {
     }
 
     // Add action delete method here
-    void handleThingActionDelete(String actionId){
-        ThingDevice *device = this->firstDevice;
-        ThingAction *action = this->firstDevice->firstAction;
+    void handleThingActionDelete(ThingDevice *device, String actionId){
         device->removeAction(actionId);
     }
 
@@ -298,8 +345,7 @@ class QubeAdapter {
         obj->start();
     }
 
-
-    // This is function is callback for GET `/things/{thingId}/events`
+    // This is function is callback for GET `/things/{thingId}/events/{eventId}`
     String handleThingEventGet(){
         ThingDevice *device = this->firstDevice;
         ThingItem *item = this->firstDevice->firstEvent;
@@ -311,7 +357,7 @@ class QubeAdapter {
         return jsonStr;
     }
 
-    // This is function is callback for GET `/things/{thingId}/properties/{propertyId}`
+    // This is function is callback for GET `/things/{thingId}/properties`
     String handleThingPropertiesGet(){
 
         /* 
@@ -347,7 +393,6 @@ class QubeAdapter {
         serializeJson(prop, jsonStr);
         return jsonStr;
     }
-
 
     // This is function is callback for POST `/things/{thingId}/actions`
     String handleThingActionsGet(){
@@ -405,6 +450,7 @@ class QubeAdapter {
         obj->start();
     }
 
+    // This is function is callback for GET `/things/{thingId}/events`
     String handleThingEventsGet() {
         ThingDevice *device = this->firstDevice;
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
