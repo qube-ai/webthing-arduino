@@ -45,21 +45,28 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 }
 ```
 
-- Get Action Request.
+- Perform action.
 `The requestAction message type is sent from a web client to a Web Thing to request an action be carried out on a Web Thing. This is equivalent to a POST request on an Actions resource URL using the REST API, but multiple actions can be requested at the same time or in quick succession over an open socket.`
 ```json
 {
   "thingId": "thingId",
-  "messageType": "getActionRequest",
+  "messageType": "performAction",
   "id": "2",
   "data": {
-    "actionId": "actionId",
-    "params": {
+    "actionId": { 
       "param1": "param1",
       "param2": "param2",
     }
   }
 }
+
+
+// here actionId is the not the key but the value. Eg : "fade": {
+    "input": {
+      "level": 50,
+      "duration": 2000
+    },
+
 ```
 
 - Get thing description. `The getThingDescription message type is sent from a web client to a Web Thing to request the description of a Web Thing. This is equivalent to a GET request on a Thing resource URL using the REST API. This will give you the thingDescription of the provided thingId.`
