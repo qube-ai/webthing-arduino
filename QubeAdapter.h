@@ -1,6 +1,6 @@
 #pragma once
 
-#define ESP32 1
+// #define ESP32 1
 
 #if defined(ESP32) || defined(ESP8266)
 
@@ -47,17 +47,17 @@ class QubeAdapter {
 
     WebSocketsClient getWebSocketClient() {
         return webSocket;
-    }    
+    }
 
-    void messageHandler(const String payload){
+
+    void messageHandler(String payload){
         
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         DeserializationError error = deserializeJson(doc, payload);
         if (error) {
             Serial.print(F("deserializeJson() failed: "));
             Serial.println(error.c_str());
-            String errorMessage = "{\"error\":\"" + error.c_str() + "\"}";
-            websocket.sendTXT(errorMessage);
+            webSocket.sendTXT("deserializeJson() failed");
         }
 
         JsonObject root = doc.as<JsonObject>();
@@ -70,7 +70,7 @@ class QubeAdapter {
         if (root["messageType"] == "setProperty") {
             String thingId = root["thingId"];
             String propertyId = root["data"]["propertyId"];
-            handleThingPropertyPutV2(thingId, propertyId, root["data"]);
+            handleThingPropertyPut(thingId, propertyId, (const char*)root["data"]);
         }
 
         if (root["messageType"] == "getThingDescription") {
@@ -85,10 +85,10 @@ class QubeAdapter {
         if (root["messageType"] == "performAction") {
             String thingId = root["thingId"];
             String actionId = root["data"]["actionId"];
-            handleThingActionPost(thingId, root["data"]);
+            handleThingActionPost(thingId, (const char*)root["data"]);
         }
 
-    }
+    }    
 
     void payloadHandler(uint8_t *payload, size_t length)
     {
@@ -99,20 +99,8 @@ class QubeAdapter {
             msgch[i] = ((char)payload[i]);
         }
         msgch[length] = '\0';
-        // Parse Json
-        StaticJsonDocument<200> doc;
-        DeserializationError error = deserializeJson(doc, msgch);
-        if (error)
-        {
-            Serial.print(F("deserializeJson() failed: "));
-            Serial.println(error.c_str());
-            return;
-        }
-        else
-        {
-            Serial.println("Parsed JSON");
-            Serial.println(doc.as<String>());
-        }
+        String msg = msgch;
+        messageHandler(msg);
     }
 
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
@@ -120,11 +108,12 @@ class QubeAdapter {
         switch (type)
         {
         case WStype_DISCONNECTED:
-            Serial.printf("[WSc] Disconnected!\n");
+            // Serial.printf("[WSc] Disconnected!\n");
             break;
 
         case WStype_CONNECTED:
             Serial.printf("[WSc] Connected to url: %s\n", payload);
+            webSocket.sendTXT("intiate connection");
             break;
 
         case WStype_TEXT:
@@ -182,19 +171,22 @@ class QubeAdapter {
     }
 
     // Begin method
-    void begin(String websocketUrl, unint8_t websocketPort){
+    void begin(String websocketUrl, int websocketPort){
 
        // TODO - I don't fully understand this logic.
        ThingDevice *device  = this->firstDevice;
         // server address, port and URL
         webSocket.begin(websocketUrl, websocketPort);
         // event handler
-        webSocket.onEvent(webSocketEvent);
+        webSocket.onEvent(std::bind(
+        &QubeAdapter::webSocketEvent, this,std::placeholders::_1,
+        std::placeholders::_2, std::placeholders::_3));
     }
 
     // Update method
     void update(){
-    
+        
+        webSocket.loop();
         #ifndef WITHOUT_WS
         // * Send changed properties as defined in "4.5 propertyStatus message"
         // Do this by looping over all devices and properties
@@ -274,7 +266,7 @@ class QubeAdapter {
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            return "error";
+            webSocket.sendTXT("Device not found");
         }
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject descr = buf.to<JsonObject>();
@@ -289,36 +281,36 @@ class QubeAdapter {
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            return "error";
+           webSocket.sendTXT("Device not found");
         }
         ThingItem *item = findPropertyById(device, propertyId);
         if (item == nullptr) {
-            return "item-error";
+            webSocket.sendTXT("Property not found");
         }
         DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
         item->serializeValue(prop);
         String jsonStr;
         serializeJson(prop, jsonStr);
-        websocket.sendTXT(jsonStr);
+        webSocket.sendTXT(jsonStr);
     }
 
     // This is function is callback for GET `/things/{thingId}/actions/{actionId}`
     void handleThingActionGet(String thingId, String actionId) {
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            return "error";
+            webSocket.sendTXT("Device not found");
         }
         ThingAction *action = findActionById(device, actionId);
         if (action == nullptr) {
-            return "action-error";
+            webSocket.sendTXT("action not found");
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeActionQueue(queue, action->id);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        rwebsocket.sendTXT(jsonStr);
+        webSocket.sendTXT(jsonStr);
     }
 
     // Delete action from queue
@@ -332,20 +324,7 @@ class QubeAdapter {
     }
 
     // This function is callback for POST `/things/{thingId}/actions/{actionId}`
-    void handleThingActionPost(String thingId, const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
-
-        /*
-            This function takes a callback function as parameter.
-            The function should be like this :
-                void notify_fn(ThingActionObject *actionObject){
-                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-                    message["messageType"] = "actionStatus";
-                    JsonObject prop = message.createNestedObject("data");
-                    action->serialize(prop, id);
-                    String jsonStr;
-                    serializeJson(message, jsonStr);
-                } 
-        */
+    void handleThingActionPost(String thingId, const char *newActionData){
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             return;
@@ -355,7 +334,7 @@ class QubeAdapter {
         auto error = deserializeJson(*newBuffer, newActionData);
         if (error) {
             // send error as response
-            Serial.print(F("[handleThingActionPost()] deserializeJson() failed with code "));
+            Serial.print(F("[handleThingActionsPost()] deserializeJson() failed with code "));
             Serial.println(error.c_str());
             return;
         }
@@ -364,20 +343,21 @@ class QubeAdapter {
         ThingActionObject *obj = device->requestAction(newBuffer);
         if (obj == nullptr) {
             // Send error as response
-            Serial.println(F("[handleThingActionPost()] requestAction() failed. Obj was nullptr."));
+            Serial.println(F("[handleThingActionsPost()] requestAction() failed. Obj was nullptr."));
             delete newBuffer;
             return;
         }
 
-        obj->setNotifyFunction([](ThingActionObject *actionObject){
-                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-                    message["messageType"] = "actionStatus";
-                    JsonObject prop = message.createNestedObject("data");
-                    action->serialize(prop, id);
-                    String jsonStr;
-                    serializeJson(message, jsonStr);
-                    webSocket.sendTXT(jsonStr);
-                });
+        // TODO add notify func
+        // obj->setNotifyFunction([](ThingActionObject *action){
+        //             DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+        //             message["messageType"] = "actionStatus";
+        //             JsonObject prop = message.createNestedObject("data");
+        //             action->serialize(prop, device->id);
+        //             String jsonStr;
+        //             serializeJson(message, jsonStr);
+        //             this->webSocket.sendTXT(jsonStr);
+        //         });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject item = respBuffer.to<JsonObject>();
@@ -391,25 +371,25 @@ class QubeAdapter {
     void handleThingEventGet(String thingId, String eventId){
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            return "error";
+            webSocket.sendTXT("Device not found");
         }
         ThingItem *item = findEventById(device, eventId);
         if (item == nullptr) {
-            return "item-error";
+            webSocket.sendTXT("Event not found");
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeEventQueue(queue, item->id);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        websocket.sendTXT(jsonStr);
+        webSocket.sendTXT(jsonStr);
     }
 
     // This function is callback for GET `/things/{thingId}/properties`
     void handleThingPropertiesGet(String thingId){
         ThingItem *rootItem = findDeviceById(thingId)->firstProperty;
         if (rootItem == nullptr) {
-            websocket.sendTXT("400");
+            webSocket.sendTXT("400");
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
@@ -420,41 +400,28 @@ class QubeAdapter {
         }
         String jsonStr;
         serializeJson(prop, jsonStr);
-        websocket.sendTXT(jsonStr);
+        webSocket.sendTXT(jsonStr);
     }
 
     // This function is callback for POST `/things/{thingId}/actions`
     void handleThingActionsGet(String thingId){
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            websocket.sendTXT("400");
+            webSocket.sendTXT("400");
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeActionQueue(queue);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        websocket.sendTXT(jsonStr);
+        webSocket.sendTXT(jsonStr);
     }
 
     // This function is callback for POST `/things/{thingId}/actions`
-    void handleThingActionsPost(String thingId, const char *newActionData, std::function<void(ThingActionObject *)> notify_fn_){
-        /*
-            This function takes a callback function as parameter.
-            The function should be like this :
-                void notify_fn(ThingActionObject *actionObject){
-                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-                    message["messageType"] = "actionStatus";
-                    JsonObject prop = message.createNestedObject("data");
-                    action->serialize(prop, id);
-                    String jsonStr;
-                    serializeJson(message, jsonStr);
-                } 
-        */
-
+    void handleThingActionsPost(String thingId, const char *newActionData){
        ThingDevice *device = findDeviceById(thingId);
        if (device == nullptr) {
-            websocket.sendTXT("400");
+            webSocket.sendTXT("400");
         }
         DynamicJsonDocument *newBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
@@ -472,18 +439,19 @@ class QubeAdapter {
             // Send error as response
             Serial.println(F("[handleThingActionPost()] requestAction() failed. Obj was nullptr."));
             delete newBuffer;
-            websocket.sendTXT("400");
+            webSocket.sendTXT("400");
         }
 
-        obj->setNotifyFunction([](ThingActionObject *actionObject){
-                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-                    message["messageType"] = "actionStatus";
-                    JsonObject prop = message.createNestedObject("data");
-                    action->serialize(prop, id);
-                    String jsonStr;
-                    serializeJson(message, jsonStr);
-                    webSocket.sendTXT(jsonStr);
-                });
+        // TODO add notify_fn_
+        // obj->setNotifyFunction([](ThingActionObject *action){
+        //             DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+        //             message["messageType"] = "actionStatus";
+        //             JsonObject prop = message.createNestedObject("data");
+        //             action->serialize(prop, device->id);
+        //             String jsonStr;
+        //             serializeJson(message, jsonStr);
+        //             this->webSocket.sendTXT(jsonStr);
+        //         });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject item = respBuffer.to<JsonObject>();
@@ -491,21 +459,21 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(item, jsonStr);
         obj->start();
-        websocket.sendTXT(jsonStr);
+        webSocket.sendTXT(jsonStr);
     }
 
     // This function is callback for GET `/things/{thingId}/events`
-    String handleThingEventsGet(String thingId) {
+    void handleThingEventsGet(String thingId) {
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            return "error";
+            webSocket.sendTXT("Device not found");
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeEventQueue(queue);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        websocket.sendTXT(jsonStr);
+        webSocket.sendTXT(jsonStr);
     }
 
     // This function was used to call handleBody for all requests
@@ -518,56 +486,15 @@ class QubeAdapter {
         b_has_body_data = true;
     }
 
-    // Most important, Most used function.
     // This function is callback for PUT `/things/{thingId}/properties/{propertyId}`
-    void handleThingPropertyPut(ThingDevice *device, ThingProperty *property){
-        DynamicJsonDocument newBuffer(SMALL_JSON_DOCUMENT_SIZE);
-        auto error = deserializeJson(newBuffer, body_data);
-        if (error) { 
-            // unable to parse json
-            b_has_body_data = false;
-            memset(body_data, 0, sizeof(body_data));
-            // TODO - Return error to the client [httpCode = 400].
-            return;
-        }
-
-        // create a json objectfrom the newBuffer (Which holds the body data)
-        JsonObject newProp = newBuffer.as<JsonObject>();
-
-        // check if the json object already contains the property id
-        // if it does not contain the property id, then return error
-        // Beacause then body is not valid for the passed property.
-        // This logic is not very usefull to us, as we will directly pass
-        // the body data which is already parsed.
-        if (!newProp.containsKey(property->id)) {
-            b_has_body_data = false;
-            memset(body_data, 0, sizeof(body_data));
-            // request->send(400);
-            return;
-        }
-
-        // Set the property of the device to the new value
-        // Let's say body data is {"on": true}
-        // We will set the property to true as
-        //  device->setProperty("some-device-id", newProp["on"]);
-        device->setProperty(property->id.c_str(), newProp[property->id]);
-
-        // TODO - Return success and updated property value `JsonObject newProp` [httpCode = 200].
-
-        // clear body data and set body data flag
-        
-        b_has_body_data = false;
-        memset(body_data, 0, sizeof(body_data));
-    }
-
-    void handleThingPropertyPutV2(String thingId, String propertyId, const char *newPropertyData){
+    void handleThingPropertyPut(String thingId, String propertyId, const char *newPropertyData){
 
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             return;
         }
-        ThingProperty *property = findPropertyById(propertyId);
+        ThingProperty *property = findPropertyById(device, propertyId);
         if (property == nullptr) {
             return;
         }
@@ -584,7 +511,7 @@ class QubeAdapter {
         device->setProperty(property->id.c_str(), newProp[property->id]);
         String jsonStr;
         serializeJson(newProp, jsonStr);
-        websocket.sendTXT(jsonStr);
+        webSocket.sendTXT(jsonStr);
     }
 
 };
