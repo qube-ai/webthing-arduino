@@ -16,19 +16,6 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
     lib_deps = https://github.com/qube-ai/webthing-arduino.git
     ```
 
-  <!-- Schema 
-  1. Get Property
-  2. Set Property
-  3. Get Action Queue
-  4. Set Action Queue
-  5. Get Event Queue
-  6. Get All Properties
-  7. Get All Actions
-  8. Get All Events
-  9. Get Full thing description
-  -->
-
-
 ## Message Schema
 ![Schema](https://img.shields.io/badge/Schema-Qube%20Things-blue.svg)
 
@@ -37,7 +24,6 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 {
   "messageType": "setProperty",
   "thingId": "thingId",
-  "id": "1",
   "data": {
     "propertyId": "propertyId",
     "newValue": "newValue",
@@ -51,7 +37,6 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 {
   "thingId": "thingId",
   "messageType": "performAction",
-  "id": "2",
   "data": {
     "actionId": { 
       "param1": "param1",
@@ -76,7 +61,6 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 {
   "thingId": "thingId",
   "messageType": "getThingDescription",
-  "id": "3",
 }
 ```
 
@@ -84,7 +68,6 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 ```json
 {
   "messageType": "getAllThings",
-  "id": "4",
 }
 ```
 
@@ -93,7 +76,6 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 {
   "messageType": "getProperty",
   "thingId": "thingId",
-  "id": "5", 
 }
 ```
 
