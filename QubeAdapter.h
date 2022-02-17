@@ -45,7 +45,50 @@ class QubeAdapter {
     bool b_has_body_data = false;
     WebSocketsClient webSocket;
 
+    WebSocketsClient getWebSocketClient() {
+        return webSocket;
+    }    
 
+    void messageHandler(const String payload){
+        
+        DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
+        DeserializationError error = deserializeJson(doc, payload);
+        if (error) {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.c_str());
+            String errorMessage = "{\"error\":\"" + error.c_str() + "\"}";
+            websocket.sendTXT(errorMessage);
+        }
+
+        JsonObject root = doc.as<JsonObject>();
+
+        if (root["messageType"] == "getProperty") {
+            String thingId = root["thingId"];
+            handleThingPropertiesGet(thingId);
+        }
+
+        if (root["messageType"] == "setProperty") {
+            String thingId = root["thingId"];
+            String propertyId = root["data"]["propertyId"];
+            handleThingPropertyPutV2(thingId, propertyId, root["data"]);
+        }
+
+        if (root["messageType"] == "getThingDescription") {
+            String thingId = root["thingId"];
+            handleThing(thingId);
+        }
+
+        if (root["messageType"] == "getAllThings") {
+            handleThings();
+        }
+
+        if (root["messageType"] == "performAction") {
+            String thingId = root["thingId"];
+            String actionId = root["data"]["actionId"];
+            handleThingActionPost(thingId, root["data"]);
+        }
+
+    }
 
     void payloadHandler(uint8_t *payload, size_t length)
     {
@@ -206,10 +249,7 @@ class QubeAdapter {
         if (dataToSend) {
             String jsonStr;
             serializeJson(message, jsonStr);
-            Serial.println("Soemthing changed");
-            Serial.println(jsonStr);
-            // Inform all connected ws clients of a Thing about changed properties
-            // ((AsyncWebSocket *)device->ws)->textAll(jsonStr);
+            webSocket.sendTXT(jsonStr);
         }
     }
 
@@ -329,7 +369,15 @@ class QubeAdapter {
             return;
         }
 
-        obj->setNotifyFunction(notify_fn_);
+        obj->setNotifyFunction([](ThingActionObject *actionObject){
+                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+                    message["messageType"] = "actionStatus";
+                    JsonObject prop = message.createNestedObject("data");
+                    action->serialize(prop, id);
+                    String jsonStr;
+                    serializeJson(message, jsonStr);
+                    webSocket.sendTXT(jsonStr);
+                });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject item = respBuffer.to<JsonObject>();
@@ -427,7 +475,15 @@ class QubeAdapter {
             websocket.sendTXT("400");
         }
 
-        obj->setNotifyFunction(notify_fn_);
+        obj->setNotifyFunction([](ThingActionObject *actionObject){
+                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+                    message["messageType"] = "actionStatus";
+                    JsonObject prop = message.createNestedObject("data");
+                    action->serialize(prop, id);
+                    String jsonStr;
+                    serializeJson(message, jsonStr);
+                    webSocket.sendTXT(jsonStr);
+                });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject item = respBuffer.to<JsonObject>();
