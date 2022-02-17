@@ -61,11 +61,13 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 }
 
 
-// here actionId is the not the key but the value. Eg : "fade": {
+// here actionId is the not the key but the value. Eg : 
+"fade": {
     "input": {
-      "level": 50,
-      "duration": 2000
+      "level": 50, // param1
+      "duration": 2000 // param2
     },
+   }
 
 ```
 
