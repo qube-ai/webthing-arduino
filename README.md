@@ -112,11 +112,19 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 }
 ```
 
-- Get Full thing description
+- Get thing description
 ```json
 {
   "thingId": "thingId",
-  "messageType": "getFullThingDescription",
+  "messageType": "getThingDescription",
   "id": "9",
+}
+```
+
+- Get All Things
+```json
+{
+  "messageType": "getAllThings",
+  "id": "10",
 }
 ```
