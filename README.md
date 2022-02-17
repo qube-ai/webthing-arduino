@@ -135,3 +135,113 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
   }
 }
 ```
+## Example Sketch
+```cpp
+#include <Arduino.h>
+#include "Thing.h"
+#include "QubeAdapter.h"
+
+// TODO: Hardcode your wifi credentials here (and keep it private)
+const char *ssid = "WillowCove";
+const char *password = "Deepwaves007";
+
+const int ledPin = LED_BUILTIN;
+
+QubeAdapter *adapter;
+
+void onOffChanged(ThingPropertyValue newValue); 
+ThingActionObject *action_generator(DynamicJsonDocument *);
+
+const char *ledTypes[] = {"OnOffSwitch", "Light", nullptr};
+ThingDevice led("led", "Built-in LED", ledTypes);
+ThingProperty ledOn("on", "", BOOLEAN, "OnOffProperty", onOffChanged);
+StaticJsonDocument<256> fadeInput;
+JsonObject fadeInputObj = fadeInput.to<JsonObject>();
+ThingAction fade("fade", "Fade", "Fade the lamp to a given level",
+                 "FadeAction", &fadeInputObj, action_generator);
+ThingEvent overheated("overheated",
+                      "The lamp has exceeded its safe operating temperature",
+                      NUMBER, "OverheatedEvent");
+                      
+bool lastOn = false;
+
+void onOffChanged(ThingPropertyValue newValue) {
+  Serial.print("On/Off changed to : ");
+  Serial.println(newValue.boolean);
+  digitalWrite(ledPin, newValue.boolean ? LOW : HIGH);
+}
+
+void setup(void)
+{
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, HIGH);
+  Serial.begin(115200);
+  Serial.println("");
+  Serial.print("Connecting to \"");
+  Serial.print(ssid);
+  Serial.println("\"");
+#if defined(ESP8266) || defined(ESP32)
+  WiFi.mode(WIFI_STA);
+#endif
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  bool blink = true;
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+    digitalWrite(ledPin, blink ? LOW : HIGH); // active low led
+    blink = !blink;
+  }
+  digitalWrite(ledPin, HIGH); // active low led
+  adapter = new QubeAdapter("led", WiFi.localIP());
+
+  led.addProperty(&ledOn);
+  fadeInputObj["type"] = "object";
+  JsonObject fadeInputProperties =
+      fadeInputObj.createNestedObject("properties");
+  JsonObject brightnessInput =
+      fadeInputProperties.createNestedObject("brightness");
+  brightnessInput["type"] = "integer";
+  brightnessInput["minimum"] = 0;
+  brightnessInput["maximum"] = 100;
+  brightnessInput["unit"] = "percent";
+  JsonObject durationInput =
+      fadeInputProperties.createNestedObject("duration");
+  durationInput["type"] = "integer";
+  durationInput["minimum"] = 1;
+  durationInput["unit"] = "milliseconds";
+  led.addAction(&fade);
+
+  overheated.unit = "degree celsius";
+  led.addEvent(&overheated);
+
+  adapter->addDevice(&led);
+  adapter->begin("192.168.29.154", 8765);
+  Serial.println("HTTP server started");
+  Serial.print("http://");
+  Serial.print(WiFi.localIP());
+  Serial.print("/things/");
+  Serial.println(led.id);
+}
+
+void loop()
+{
+  adapter->update();
+}
+
+void do_fade(const JsonVariant &input) {
+  Serial.println("Fade called");
+  Serial.println(input.as<String>());
+  fadeInputObj = input.as<JsonObject>();
+  Serial.println(fadeInputObj["level"].as<String>());
+  Serial.println(fadeInputObj["duration"].as<String>());
+  Serial.println(fadeInputObj["unit"].as<String>());
+}
+
+ThingActionObject *action_generator(DynamicJsonDocument *input) {
+  return new ThingActionObject("fade", input, do_fade, nullptr);
+}
+```
