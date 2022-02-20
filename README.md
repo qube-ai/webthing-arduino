@@ -19,7 +19,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 ## Message Schema
 ![Schema](https://img.shields.io/badge/Schema-Qube%20Things-blue.svg)
 
-- Set Property. `The setProperty message type is sent from a web client to a Web Thing in order to set the value of one or more of its properties. This is equivalent to a PUT request on a Property resource URL using the REST API, but with the WebSocket API a property value can be changed multiple times in quick succession over an open socket and multiple properties can be set at the same time.`
+- `Set Property` The setProperty message type is sent from a web client to a Web Thing in order to set the value of one or more of its properties. This is equivalent to a PUT request on a Property resource URL using the REST API, but with the WebSocket API a property value can be changed multiple times in quick succession over an open socket and multiple properties can be set at the same time.
 ```json
 {
   "messageType": "setProperty",
@@ -31,8 +31,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 }
 ```
 
-- Perform action.
-`The requestAction message type is sent from a web client to a Web Thing to request an action be carried out on a Web Thing. This is equivalent to a POST request on an Actions resource URL using the REST API, but multiple actions can be requested at the same time or in quick succession over an open socket.`
+- `Perform action` The requestAction message type is sent from a web client to a Web Thing to request an action be carried out on a Web Thing. This is equivalent to a POST request on an Actions resource URL using the REST API, but multiple actions can be requested at the same time or in quick succession over an open socket.
 ```json
 {
   "thingId": "thingId",
@@ -56,7 +55,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 
 ```
 
-- Get thing description. `The getThingDescription message type is sent from a web client to a Web Thing to request the description of a Web Thing. This is equivalent to a GET request on a Thing resource URL using the REST API. This will give you the thingDescription of the provided thingId.`
+- `Get thing description` The getThingDescription message type is sent from a web client to a Web Thing to request the description of a Web Thing. This is equivalent to a GET request on a Thing resource URL using the REST API. This will give you the thingDescription of the provided thingId.
 ```json
 {
   "thingId": "thingId",
@@ -64,14 +63,14 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 }
 ```
 
-- Get All Things. `The getThingDescription message type is sent from a web client to a Web Thing to request the description of a Web Thing. This is equivalent to a GET request on a Thing resource URL using the REST API. This will give you the thingDescription of the all things.`
+- `Get All Things` The getThingDescription message type is sent from a web client to a Web Thing to request the description of a Web Thing. This is equivalent to a GET request on a Thing resource URL using the REST API. This will give you the thingDescription of the all things.
 ```json
 {
   "messageType": "getAllThings",
 }
 ```
 
-- Get Property. `This will give the value of the propertyId of the provided thingId.`
+- `Get Property` This will give the value of the propertyId of the provided thingId.
 ```json
 {
   "messageType": "getProperty",
@@ -81,7 +80,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 
 ### Message sent by the Web Thing to the Web Client
 
-- Property Status. `The propertyStatus message type is sent from a Web Thing to a web client whenever a property of a Web Thing changes. The payload data of this message is in the same format as a response to a GET request on Property resource using the REST API, but the message is pushed to the client whenever a property changes and can include multiple properties at the same time.`
+- `Property Status` The propertyStatus message type is sent from a Web Thing to a web client whenever a property of a Web Thing changes. The payload data of this message is in the same format as a response to a GET request on Property resource using the REST API, but the message is pushed to the client whenever a property changes and can include multiple properties at the same time.
 ```json
 {
   "messageType": "propertyStatus",
@@ -91,7 +90,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 }
 ```
 
-- Action Status. `The actionStatus message type is sent from a Web Thing to a web client when the status of a requested action changes. The payload data is consistent with the format of an Action resource in the REST API, but messages are pushed to the client as soon as the status of an action changes.`
+- `Action Status` The actionStatus message type is sent from a Web Thing to a web client when the status of a requested action changes. The payload data is consistent with the format of an Action resource in the REST API, but messages are pushed to the client as soon as the status of an action changes.
 ```json
 {
   "messageType": "actionStatus",
@@ -106,7 +105,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 }
 ```
 
-- Event. `The event message type is sent from a Web Thing to a web client when an event occurs on the Web Thing. The payload data is consistent with the format of an Event resource in the REST API but messages are pushed to the client as soon as an event occurs.`
+- `Event` The event message type is sent from a Web Thing to a web client when an event occurs on the Web Thing. The payload data is consistent with the format of an Event resource in the REST API but messages are pushed to the client as soon as an event occurs.
 ```json
 {
   "messageType": "event",
