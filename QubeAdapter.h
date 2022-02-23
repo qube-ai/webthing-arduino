@@ -128,6 +128,36 @@ class QubeAdapter {
         case WS_EVT_DATA:
             Serial.printf("[WSc] get binary length: %u\n", length);
             break;
+        
+        case WStype_ERROR:
+            Serial.printf("[WSc] Error!\n");
+            break;
+        
+        case WStype_FRAGMENT_TEXT_START:
+            Serial.printf("[WSc] Fragment Text Start!\n");
+            break;
+        
+        case WStype_FRAGMENT_BIN_START:
+            Serial.printf("[WSc] Fragment Bin Start!\n");
+            break;
+
+        case WStype_FRAGMENT:
+            Serial.printf("[WSc] Fragment!\n");
+            break;
+        
+        case WStype_FRAGMENT_FIN:
+            Serial.printf("[WSc] Fragment Fin!\n");
+            break;
+
+        case WStype_PING:
+            Serial.printf("[WSc] Ping!\n");
+            break;
+        
+        case WStype_PONG:
+            Serial.printf("[WSc] Pong!\n");
+            break;
+        
+
         }
 }
 
@@ -178,8 +208,6 @@ class QubeAdapter {
     // Begin method
     void begin(String websocketUrl, int websocketPort){
 
-       // TODO - I don't fully understand this logic.
-       ThingDevice *device  = this->firstDevice;
         // server address, port and URL
         webSocket.begin(websocketUrl, websocketPort);
         // event handler
@@ -349,7 +377,7 @@ class QubeAdapter {
             Serial.println(error.c_str());
             return;
         }
-        JsonObject newAction = newBuffer->as<JsonObject>();
+        // JsonObject newAction = newBuffer->as<JsonObject>();
 
         ThingActionObject *obj = device->requestAction(newBuffer);
         if (obj == nullptr) {
@@ -448,7 +476,7 @@ class QubeAdapter {
             Serial.println(error.c_str());
             return;
         }
-        JsonObject newAction = newBuffer->as<JsonObject>();
+        // JsonObject newAction = newBuffer->as<JsonObject>();
 
         ThingActionObject *obj = device->requestAction(newBuffer);
         if (obj == nullptr) {
