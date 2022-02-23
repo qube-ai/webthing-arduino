@@ -49,6 +49,10 @@ class QubeAdapter {
         return webSocket;
     }
 
+    void sendMessage(String & msg) {
+        webSocket.sendTXT(msg.c_str(), msg.length() + 1);
+    }
+
 
     void messageHandler(String payload){
         
@@ -57,7 +61,8 @@ class QubeAdapter {
         if (error) {
             Serial.print(F("deserializeJson() failed: "));
             Serial.println(error.c_str());
-            webSocket.sendTXT("deserializeJson() failed");
+            String msg = "{\"messsageType\":\"error\", \"data\":\"deserializeJson() failed \"}";
+            sendMessage(msg);
         }
 
         JsonObject root = doc.as<JsonObject>();
@@ -113,7 +118,7 @@ class QubeAdapter {
 
         case WStype_CONNECTED:
             Serial.printf("[WSc] Connected to url: %s\n", payload);
-            webSocket.sendTXT("intiate connection");
+            webSocket.sendTXT("{\"messageType\":\"StartWs\"}");
             break;
 
         case WStype_TEXT:
@@ -241,12 +246,13 @@ class QubeAdapter {
         if (dataToSend) {
             String jsonStr;
             serializeJson(message, jsonStr);
-            webSocket.sendTXT(jsonStr);
+            sendMessage(jsonStr);
         }
     }
 
     // This is function is callback for `/things`
     void handleThings(){
+        Serial.println("handleThings()");
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray things = buf.to<JsonArray>();
         ThingDevice *device = this->firstDevice;
@@ -258,7 +264,7 @@ class QubeAdapter {
         }
         String jsonStr;
         serializeJson(things, jsonStr);
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }
 
     // This is function is callback for `/things/{thingId}`
@@ -266,14 +272,15 @@ class QubeAdapter {
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            webSocket.sendTXT("Device not found");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+            sendMessage(msg);
         }
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject descr = buf.to<JsonObject>();
         device->serialize(descr, ip, port);
         String jsonStr;
         serializeJson(descr, jsonStr);
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }   
 
     // This is function is callback for GET `/things/{thingId}/properties`
@@ -281,36 +288,40 @@ class QubeAdapter {
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-           webSocket.sendTXT("Device not found");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+           sendMessage(msg);
         }
         ThingItem *item = findPropertyById(device, propertyId);
         if (item == nullptr) {
-            webSocket.sendTXT("Property not found");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Property not found\"}}";
+           sendMessage(msg);
         }
         DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
         item->serializeValue(prop);
         String jsonStr;
         serializeJson(prop, jsonStr);
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }
 
     // This is function is callback for GET `/things/{thingId}/actions/{actionId}`
     void handleThingActionGet(String thingId, String actionId) {
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            webSocket.sendTXT("Device not found");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+           sendMessage(msg);
         }
         ThingAction *action = findActionById(device, actionId);
         if (action == nullptr) {
-            webSocket.sendTXT("action not found");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Action not found\"}}";
+           sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeActionQueue(queue, action->id);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }
 
     // Delete action from queue
@@ -356,7 +367,7 @@ class QubeAdapter {
         //             action->serialize(prop, device->id);
         //             String jsonStr;
         //             serializeJson(message, jsonStr);
-        //             this->webSocket.sendTXT(jsonStr);
+        //             this->sendMessage(jsonStr);
         //         });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
@@ -371,25 +382,28 @@ class QubeAdapter {
     void handleThingEventGet(String thingId, String eventId){
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            webSocket.sendTXT("Device not found");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+           sendMessage(msg);
         }
         ThingItem *item = findEventById(device, eventId);
         if (item == nullptr) {
-            webSocket.sendTXT("Event not found");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Event not found\"}}";
+           sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeEventQueue(queue, item->id);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }
 
     // This function is callback for GET `/things/{thingId}/properties`
     void handleThingPropertiesGet(String thingId){
         ThingItem *rootItem = findDeviceById(thingId)->firstProperty;
         if (rootItem == nullptr) {
-            webSocket.sendTXT("400");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+           sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
@@ -400,28 +414,30 @@ class QubeAdapter {
         }
         String jsonStr;
         serializeJson(prop, jsonStr);
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }
 
     // This function is callback for POST `/things/{thingId}/actions`
     void handleThingActionsGet(String thingId){
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            webSocket.sendTXT("400");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+           sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeActionQueue(queue);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }
 
     // This function is callback for POST `/things/{thingId}/actions`
     void handleThingActionsPost(String thingId, const char *newActionData){
        ThingDevice *device = findDeviceById(thingId);
        if (device == nullptr) {
-            webSocket.sendTXT("400");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+           sendMessage(msg);
         }
         DynamicJsonDocument *newBuffer =
         new DynamicJsonDocument(SMALL_JSON_DOCUMENT_SIZE);
@@ -439,7 +455,8 @@ class QubeAdapter {
             // Send error as response
             Serial.println(F("[handleThingActionPost()] requestAction() failed. Obj was nullptr."));
             delete newBuffer;
-            webSocket.sendTXT("400");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"requestAction was a nullptr.\"}}";
+           sendMessage(msg);
         }
 
         // TODO add notify_fn_
@@ -450,7 +467,7 @@ class QubeAdapter {
         //             action->serialize(prop, device->id);
         //             String jsonStr;
         //             serializeJson(message, jsonStr);
-        //             this->webSocket.sendTXT(jsonStr);
+        //             this->sendMessage(jsonStr);
         //         });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
@@ -459,21 +476,22 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(item, jsonStr);
         obj->start();
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }
 
     // This function is callback for GET `/things/{thingId}/events`
     void handleThingEventsGet(String thingId) {
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            webSocket.sendTXT("Device not found");
+            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+           sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray queue = doc.to<JsonArray>();
         device->serializeEventQueue(queue);
         String jsonStr;
         serializeJson(queue, jsonStr);
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }
 
     // This function was used to call handleBody for all requests
@@ -511,7 +529,7 @@ class QubeAdapter {
         device->setProperty(property->id.c_str(), newProp[property->id]);
         String jsonStr;
         serializeJson(newProp, jsonStr);
-        webSocket.sendTXT(jsonStr);
+        sendMessage(jsonStr);
     }
 
 };
