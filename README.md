@@ -170,6 +170,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 {
   "messageType":"error",
   "thingId": "some_thing_id",
+  "eventId": "some_event_id",
   "errorCode":"404",
   "errorMessage":"Event not found"
 }
@@ -180,6 +181,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 {
   "messageType": "error",
   "thingId": "some_thing_id",
+  "propertyId": "some_property_id",
   "errorCode": "404",
   "errorMessage": "Property not found"
 }
@@ -190,6 +192,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 {
   "messageType": "error",
   "thingId": "some_thing_id",
+  "actionId": "some_action_id",
   "errorCode": "404",
   "errorMessage": "Action not found"
 }
@@ -201,6 +204,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 {
   "messageType": "error",
   "thingId": "some_thing_id",
+  "actionId": "some_action_id",
   "errorCode": "404",
   "errorMessage": "Request action object was null ptr."
 }
