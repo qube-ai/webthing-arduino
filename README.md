@@ -19,6 +19,9 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 ## Message Schema
 ![Schema](https://img.shields.io/badge/Schema-Qube%20Things-blue.svg)
 
+### Message sent by the Web Client to the Web Thing
+> These are the only messageType(s) allowed by the library, and any other types will not pe processed.
+
 - `Set Property` The setProperty message type is sent from a web client to a Web Thing in order to set the value of one or more of its properties. This is equivalent to a PUT request on a Property resource URL using the REST API, but with the WebSocket API a property value can be changed multiple times in quick succession over an open socket and multiple properties can be set at the same time.
 ```json
 {
@@ -80,6 +83,8 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 
 ### Message sent by the Web Thing to the Web Client
 
+> These are the only messageType(s) that the library will/can send to web client.
+
 - `Property Status` The propertyStatus message type is sent from a Web Thing to a web client whenever a property of a Web Thing changes. The payload data of this message is in the same format as a response to a GET request on Property resource using the REST API, but the message is pushed to the client whenever a property changes and can include multiple properties at the same time.
 ```json
 {
@@ -119,6 +124,89 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
   }
 }
 ```
+
+### Error Messages
+
+> These are all the error messages sent by the library.
+
+- `Invalid Json`
+```json
+{
+  "messsageType": "error",
+  "thingId": "some_thing_id",
+  "errorMessage" :"deserializeJson() failed "
+}
+```
+
+- `Unkown Message type`
+```json
+{
+  "messsageType": "error",
+  "thingId": "some_thing_id",
+  "errorMessage": "unknown messageType"
+}
+```
+
+- `Start WS connection`
+```json
+{
+  "messsageType": "StartWs",
+  "thingId": "some_thing_id"
+}
+```
+
+- `Invalid Thing ID`
+```json
+{
+  "messageType":"error",
+  "thingId": "some_thing_id",
+  "errorCode":"404",
+  "errorMessage":"Thing not found"
+}
+```
+
+- `Invalid Event ID`
+```json
+{
+  "messageType":"error",
+  "thingId": "some_thing_id",
+  "errorCode":"404",
+  "errorMessage":"Event not found"
+}
+```
+
+- `Invalid Property ID`
+```json
+{
+  "messageType": "error",
+  "thingId": "some_thing_id",
+  "errorCode": "404",
+  "errorMessage": "Property not found"
+}
+```
+
+- `Invalid Action ID`
+```json
+{
+  "messageType": "error",
+  "thingId": "some_thing_id",
+  "errorCode": "404",
+  "errorMessage": "Action not found"
+}
+```
+
+- `If action object was null ptr`
+> This should never happen, but just in case.
+```json
+{
+  "messageType": "error",
+  "thingId": "some_thing_id",
+  "errorCode": "404",
+  "errorMessage": "Request action object was null ptr."
+}
+```
+
+
 ## Example Sketch
 ```cpp
 #include <Arduino.h>
