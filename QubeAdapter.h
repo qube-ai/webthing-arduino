@@ -61,7 +61,7 @@ class QubeAdapter {
         if (error) {
             Serial.print(F("deserializeJson() failed: "));
             Serial.println(error.c_str());
-            String msg = "{\"messsageType\":\"error\", \"data\":\"deserializeJson() failed \"}";
+            String msg = "{\"messsageType\":\"error\", \"errorMessage\":\"deserializeJson() failed \", \"thingId\": \"" + String(device->id) + "\"}";
             sendMessage(msg);
         }
 
@@ -93,6 +93,11 @@ class QubeAdapter {
             handleThingActionPost(thingId, (const char*)root["data"]);
         }
 
+        else {
+            String msg = "{\"messsageType\":\"error\", \"errorMessage\":\"unknown messageType \", \"thingId\": \"" + String(device->id) + "\"}";
+            sendMessage(msg);
+        }
+
     }    
 
     void payloadHandler(uint8_t *payload, size_t length)
@@ -118,7 +123,7 @@ class QubeAdapter {
 
         case WStype_CONNECTED:
             Serial.printf("[WSc] Connected to url: %s\n", payload);
-            webSocket.sendTXT("{\"messageType\":\"StartWs\"}");
+            webSocket.sendTXT("{\"messageType\":\"StartWs\", \"thingId\": \"" + String(device->id) + "\"}");
             break;
 
         case WStype_TEXT:
@@ -301,7 +306,7 @@ class QubeAdapter {
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
             sendMessage(msg);
         }
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
@@ -317,12 +322,12 @@ class QubeAdapter {
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
            sendMessage(msg);
         }
         ThingItem *item = findPropertyById(device, propertyId);
         if (item == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Property not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Property not found\", \"thingId\": \"" + thingId + "\", \"propertyId\": \"" + propertyId + "\"}";
            sendMessage(msg);
         }
         DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
@@ -337,12 +342,12 @@ class QubeAdapter {
     void handleThingActionGet(String thingId, String actionId) {
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
            sendMessage(msg);
         }
         ThingAction *action = findActionById(device, actionId);
         if (action == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Action not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Action not found\", \"thingId\": \"" + thingId + "\", \"actionId\": \"" + actionId + "\"}";
            sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
@@ -412,12 +417,12 @@ class QubeAdapter {
     void handleThingEventGet(String thingId, String eventId){
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
            sendMessage(msg);
         }
         ThingItem *item = findEventById(device, eventId);
         if (item == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Event not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Event not found\", \"thingId\": \"" + thingId + "\", \"eventId\": \"" + eventId + "\"}";
            sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
@@ -432,7 +437,7 @@ class QubeAdapter {
     void handleThingPropertiesGet(String thingId){
         ThingItem *rootItem = findDeviceById(thingId)->firstProperty;
         if (rootItem == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
            sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
@@ -451,7 +456,7 @@ class QubeAdapter {
     void handleThingActionsGet(String thingId){
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
            sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
@@ -466,7 +471,7 @@ class QubeAdapter {
     void handleThingActionsPost(String thingId, const char *newActionData){
        ThingDevice *device = findDeviceById(thingId);
        if (device == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
            sendMessage(msg);
         }
         DynamicJsonDocument *newBuffer =
@@ -485,7 +490,7 @@ class QubeAdapter {
             // Send error as response
             Serial.println(F("[handleThingActionPost()] requestAction() failed. Obj was nullptr."));
             delete newBuffer;
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"requestAction was a nullptr.\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Request action was null ptr.\", \"thingId\": \"" + thingId + "\", \"actionId\": \"" + obj->id + "\"}";
            sendMessage(msg);
         }
 
@@ -514,7 +519,7 @@ class QubeAdapter {
     void handleThingEventsGet(String thingId) {
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
-            String msg = "{\"messageType\":\"error\",\"data\":{\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\"}}";
+            String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
            sendMessage(msg);
         }
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
