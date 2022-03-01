@@ -273,6 +273,7 @@ class QubeAdapter {
         }
         if (dataToSend) {
             String jsonStr;
+            message["thingId"] = device->id;
             serializeJson(message, jsonStr);
             sendMessage(jsonStr);
         }
@@ -388,15 +389,16 @@ class QubeAdapter {
         }
 
         // TODO add notify func
-        // obj->setNotifyFunction([](ThingActionObject *action){
-        //             DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-        //             message["messageType"] = "actionStatus";
-        //             JsonObject prop = message.createNestedObject("data");
-        //             action->serialize(prop, device->id);
-        //             String jsonStr;
-        //             serializeJson(message, jsonStr);
-        //             this->sendMessage(jsonStr);
-        //         });
+        obj->setNotifyFunction([](ThingActionObject *action){
+                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+                    message["messageType"] = "actionStatus";
+                    message["thingId"] = device->id;
+                    JsonObject prop = message.createNestedObject("data");
+                    action->serialize(prop, device->id);
+                    String jsonStr;
+                    serializeJson(message, jsonStr);
+                    sendMessage(jsonStr);
+                });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject item = respBuffer.to<JsonObject>();
@@ -488,15 +490,16 @@ class QubeAdapter {
         }
 
         // TODO add notify_fn_
-        // obj->setNotifyFunction([](ThingActionObject *action){
-        //             DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-        //             message["messageType"] = "actionStatus";
-        //             JsonObject prop = message.createNestedObject("data");
-        //             action->serialize(prop, device->id);
-        //             String jsonStr;
-        //             serializeJson(message, jsonStr);
-        //             this->sendMessage(jsonStr);
-        //         });
+        obj->setNotifyFunction([](ThingActionObject *action){
+                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+                    message["messageType"] = "actionStatus";
+                    message["thingId"] = device->id;
+                    JsonObject prop = message.createNestedObject("data");
+                    action->serialize(prop, device->id);
+                    String jsonStr;
+                    serializeJson(message, jsonStr);
+                    this->sendMessage(jsonStr);
+                });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject item = respBuffer.to<JsonObject>();
@@ -518,6 +521,7 @@ class QubeAdapter {
         JsonArray queue = doc.to<JsonArray>();
         device->serializeEventQueue(queue);
         String jsonStr;
+        queue[0]["data"]["thingId"] = thingId;
         serializeJson(queue, jsonStr);
         sendMessage(jsonStr);
     }
@@ -555,6 +559,7 @@ class QubeAdapter {
 
         JsonObject newProp = newBuffer.as<JsonObject>();
         device->setProperty(property->id.c_str(), newProp[property->id]);
+        newProp['thingId'] = thingId;
         String jsonStr;
         serializeJson(newProp, jsonStr);
         sendMessage(jsonStr);
