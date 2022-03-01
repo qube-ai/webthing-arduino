@@ -84,6 +84,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 ```json
 {
   "messageType": "propertyStatus",
+  "thingId" : "some_thing_id",
   "data": {
     "led": true
   }
@@ -94,6 +95,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 ```json
 {
   "messageType": "actionStatus",
+  "thingId" : "some_thing_id",
   "data": {
     "grab": {
       "href": "/actions/grab/123e4567-e89b-12d3-a456-426655",
@@ -109,6 +111,7 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
 ```json
 {
   "messageType": "event",
+  "thingId" : "some_thing_id",
   "data": {
     "motion": {
       "timestamp": "2017-01-24T13:02:45+00:00"
