@@ -61,7 +61,7 @@ class QubeAdapter {
         if (error) {
             Serial.print(F("deserializeJson() failed: "));
             Serial.println(error.c_str());
-            String msg = "{\"messsageType\":\"error\", \"errorMessage\":\"deserializeJson() failed \", \"thingId\": \"" + String(device->id) + "\"}";
+            String msg = "{\"messageType\":\"error\", \"errorMessage\":\"deserializeJson() failed \"}";
             sendMessage(msg);
         }
 
@@ -75,7 +75,10 @@ class QubeAdapter {
         if (root["messageType"] == "setProperty") {
             String thingId = root["thingId"];
             String propertyId = root["data"]["propertyId"];
-            handleThingPropertyPut(thingId, propertyId, (const char*)root["data"]);
+            Serial.println("messageType setProperty was called");
+            Serial.println("Going to change the property");
+            String data  = root["data"];
+            handleThingPropertyPut(thingId, propertyId, data);
         }
 
         if (root["messageType"] == "getThingDescription") {
@@ -94,8 +97,11 @@ class QubeAdapter {
         }
 
         else {
-            String msg = "{\"messsageType\":\"error\", \"errorMessage\":\"unknown messageType \", \"thingId\": \"" + String(device->id) + "\"}";
-            sendMessage(msg);
+            Serial.println("Unknown message type");
+            Serial.println(root);
+            Serial.println(payload);
+            // String msg = "{\"messageType\":\"error\", \"errorMessage\":\"unknown messageType \"}";
+            // sendMessage(msg);
         }
 
     }    
@@ -123,7 +129,7 @@ class QubeAdapter {
 
         case WStype_CONNECTED:
             Serial.printf("[WSc] Connected to url: %s\n", payload);
-            webSocket.sendTXT("{\"messageType\":\"StartWs\", \"thingId\": \"" + String(device->id) + "\"}");
+            webSocket.sendTXT("{\"messageType\":\"StartWs\"}");
             break;
 
         case WStype_TEXT:
@@ -211,10 +217,10 @@ class QubeAdapter {
     }
 
     // Begin method
-    void begin(String websocketUrl, int websocketPort){
+    void begin(String websocketUrl, int websocketPort, String websocketPath) {
 
         // server address, port and URL
-        webSocket.begin(websocketUrl, websocketPort);
+        webSocket.begin(websocketUrl, websocketPort, websocketPath);
         // event handler
         webSocket.onEvent(std::bind(
         &QubeAdapter::webSocketEvent, this,std::placeholders::_1,
@@ -333,8 +339,13 @@ class QubeAdapter {
         DynamicJsonDocument doc(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
         item->serializeValue(prop);
+        DynamicJsonDocument finalDoc(SMALL_JSON_DOCUMENT_SIZE);
+        JsonObject finalProp = finalDoc.to<JsonObject>();
+        finalDoc["messageType"] = "getProperty";
+        finalDoc["thingId"] = thingId;
+        finalDoc["properties"] = prop;
         String jsonStr;
-        serializeJson(prop, jsonStr);
+        serializeJson(finalProp, jsonStr);
         sendMessage(jsonStr);
     }
 
@@ -394,16 +405,16 @@ class QubeAdapter {
         }
 
         // TODO add notify func
-        obj->setNotifyFunction([](ThingActionObject *action){
-                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-                    message["messageType"] = "actionStatus";
-                    message["thingId"] = device->id;
-                    JsonObject prop = message.createNestedObject("data");
-                    action->serialize(prop, device->id);
-                    String jsonStr;
-                    serializeJson(message, jsonStr);
-                    sendMessage(jsonStr);
-                });
+        // obj->setNotifyFunction([](ThingActionObject *action){
+        //             DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+        //             message["messageType"] = "actionStatus";
+        //             message["thingId"] = action->device->id;
+        //             JsonObject prop = message.createNestedObject("data");
+        //             action->serialize(prop, device->id);
+        //             String jsonStr;
+        //             serializeJson(message, jsonStr);
+        //             sendMessage(jsonStr);
+        //         });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject item = respBuffer.to<JsonObject>();
@@ -447,8 +458,13 @@ class QubeAdapter {
             item->serializeValue(prop);
             item = item->next;
         }
+        DynamicJsonDocument finalDoc(SMALL_JSON_DOCUMENT_SIZE);
+        JsonObject finalProp = finalDoc.to<JsonObject>();
+        finalDoc["messageType"] = "getProperty";
+        finalDoc["thingId"] = thingId;
+        finalDoc["properties"] = prop;
         String jsonStr;
-        serializeJson(prop, jsonStr);
+        serializeJson(finalProp, jsonStr);
         sendMessage(jsonStr);
     }
 
@@ -495,16 +511,16 @@ class QubeAdapter {
         }
 
         // TODO add notify_fn_
-        obj->setNotifyFunction([](ThingActionObject *action){
-                    DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
-                    message["messageType"] = "actionStatus";
-                    message["thingId"] = device->id;
-                    JsonObject prop = message.createNestedObject("data");
-                    action->serialize(prop, device->id);
-                    String jsonStr;
-                    serializeJson(message, jsonStr);
-                    this->sendMessage(jsonStr);
-                });
+        // obj->setNotifyFunction([](ThingActionObject *action){
+        //             DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
+        //             message["messageType"] = "actionStatus";
+        //             message["thingId"] = device->id;
+        //             JsonObject prop = message.createNestedObject("data");
+        //             action->serialize(prop, device->id);
+        //             String jsonStr;
+        //             serializeJson(message, jsonStr);
+        //             this->sendMessage(jsonStr);
+        //         });
 
         DynamicJsonDocument respBuffer(SMALL_JSON_DOCUMENT_SIZE);
         JsonObject item = respBuffer.to<JsonObject>();
@@ -542,7 +558,7 @@ class QubeAdapter {
     }
 
     // This function is callback for PUT `/things/{thingId}/properties/{propertyId}`
-    void handleThingPropertyPut(String thingId, String propertyId, const char *newPropertyData){
+    void handleThingPropertyPut(String thingId, String propertyId, String newPropertyData){
 
 
         ThingDevice *device = findDeviceById(thingId);
@@ -553,18 +569,20 @@ class QubeAdapter {
         if (property == nullptr) {
             return;
         }
-        DynamicJsonDocument newBuffer(SMALL_JSON_DOCUMENT_SIZE);
+        DynamicJsonDocument newBuffer(LARGE_JSON_DOCUMENT_SIZE);
         auto error = deserializeJson(newBuffer, newPropertyData);
 
         if (error) { 
             // unable to parse json
             Serial.println("Unable to parse json for property PUT request V2");
+            Serial.println(error.c_str());
+            // serializeJsonPretty(newPropertyData, Serial);
             return;
         }
-
+        newBuffer["thingId"] = thingId;
+        newBuffer["messageType"] = "updatedProperty";
         JsonObject newProp = newBuffer.as<JsonObject>();
-        device->setProperty(property->id.c_str(), newProp[property->id]);
-        newProp['thingId'] = thingId;
+        device->setProperty(property->id.c_str(), newProp["value"]);
         String jsonStr;
         serializeJson(newProp, jsonStr);
         sendMessage(jsonStr);
