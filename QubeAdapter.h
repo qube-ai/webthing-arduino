@@ -292,7 +292,6 @@ class QubeAdapter {
 
     // This is function is callback for `/things`
     void handleThings(){
-        Serial.println("handleThings()");
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray things = buf.to<JsonArray>();
         ThingDevice *device = this->firstDevice;
@@ -302,8 +301,12 @@ class QubeAdapter {
             descr["href"] = "/things/" + device->id;
             device = device->next;   
         }
+        StaticJsonDocument<LARGE_JSON_DOCUMENT_SIZE> doc;
+        JsonObject doc2 = doc.to<JsonObject>();
+        doc2["messageType"] = "descriptionOfThings";
+        doc2["things"] = things;
         String jsonStr;
-        serializeJson(things, jsonStr);
+        serializeJson(doc2, jsonStr);
         sendMessage(jsonStr);
     }
 
