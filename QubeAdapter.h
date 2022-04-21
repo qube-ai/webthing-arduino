@@ -219,8 +219,12 @@ class QubeAdapter {
     // Begin method
     void begin(String websocketUrl, int websocketPort, String websocketPath) {
 
+        #ifndef WSS_ENABLED
+        websocket.beginSSL(websocketUrl, websocketPort, websocketPath);
+        #else
         // server address, port and URL
         webSocket.begin(websocketUrl, websocketPort, websocketPath);
+        #endif
         // event handler
         webSocket.onEvent(std::bind(
         &QubeAdapter::webSocketEvent, this,std::placeholders::_1,
@@ -254,17 +258,6 @@ class QubeAdapter {
             this->lastDevice = device;
         }
 
-        #ifndef WITHOUT_WS
-        // TODO - I don't fully understand this logic.
-        // Initiate the websocket instance
-        /* 
-            - Create  a websocket instance.
-            - Set the callback for the websocket.
-            call back to be called :
-                handleWS()
-            - Add this websocket instance to the server.
-        */
-        #endif
     }
 
     void sendChangedProperties(ThingDevice *device) {
