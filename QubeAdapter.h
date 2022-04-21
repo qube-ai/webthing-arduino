@@ -1,6 +1,5 @@
 #pragma once
 
-// #define ESP32 1
 
 #if defined(ESP32) || defined(ESP8266)
 
