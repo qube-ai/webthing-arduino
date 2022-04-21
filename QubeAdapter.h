@@ -219,7 +219,7 @@ class QubeAdapter {
     void begin(String websocketUrl, int websocketPort, String websocketPath) {
 
         #ifndef WSS_ENABLED
-        websocket.beginSSL(websocketUrl, websocketPort, websocketPath);
+        webSocket.beginSSL(websocketUrl, websocketPort, websocketPath);
         #else
         // server address, port and URL
         webSocket.begin(websocketUrl, websocketPort, websocketPath);
