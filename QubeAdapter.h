@@ -138,7 +138,7 @@ class QubeAdapter {
             break;
 
         case WStype_CONNECTED:
-            Serial.print(F("[QA:webSocketEvent:WStype_CONNECTED] Connceted to URL - "));
+            Serial.println(F("[QA:webSocketEvent:WStype_CONNECTED] Connceted to URL"));
             // TODO Dumbo you can't print uint8_t
             // Serial.println(payload);
             webSocket.sendTXT("{\"messageType\":\"StartWs\"}");
@@ -281,7 +281,15 @@ class QubeAdapter {
     }
 
     void sendChangedProperties(ThingDevice *device) {
-        Serial.println(F("[QA:sendChangedProperties]"));
+        // TODO - Since this is executed all the time...it's filling up the log
+        // Commenting this out for now
+        // Serial.print(F("[QA:sendChangedProperties] Memory - "));
+        // Serial.println(ESP.getFreeHeap(), DEC);
+        
+        Serial.print("#");
+        
+        // Feed the watchdog timer to prevent reset
+        ESP.wdtFeed();
 
         // Prepare one buffer per device
         DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
@@ -591,6 +599,7 @@ class QubeAdapter {
             return; // cannot store this size..
         }
         // copy to internal buffer
+        // TODO - Need to ensure that memcpy is being passed NULL in 'data' variable
         memcpy(&body_data[index], data, len);
         b_has_body_data = true;
     }
