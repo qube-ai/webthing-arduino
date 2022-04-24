@@ -1,5 +1,6 @@
 #pragma once
 
+#define ESP8266 1
 
 #if defined(ESP32) || defined(ESP8266)
 
@@ -49,11 +50,13 @@ class QubeAdapter {
     }
 
     void sendMessage(String & msg) {
+        Serial.println(F("[QA:sendMessage]"));
         webSocket.sendTXT(msg.c_str(), msg.length() + 1);
     }
 
 
-    void messageHandler(String payload){
+    void messageHandler(String payload) {
+        Serial.println(F("[QA:messagehandler]"));
         
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         DeserializationError error = deserializeJson(doc, payload);
@@ -65,6 +68,8 @@ class QubeAdapter {
         }
 
         JsonObject root = doc.as<JsonObject>();
+        Serial.print(F("[QA:messagehandler] message type - "));
+        Serial.println(root["messageType"].as<String>());
 
         if (root["messageType"] == "getProperty") {
             String thingId = root["thingId"];
@@ -74,8 +79,6 @@ class QubeAdapter {
         if (root["messageType"] == "setProperty") {
             String thingId = root["thingId"];
             String propertyId = root["data"]["propertyId"];
-            Serial.println("messageType setProperty was called");
-            Serial.println("Going to change the property");
             String data  = root["data"];
             handleThingPropertyPut(thingId, propertyId, data);
         }
@@ -96,9 +99,11 @@ class QubeAdapter {
         }
 
         else {
-            Serial.println("Unknown message type");
-            Serial.println(root);
+            Serial.print(F("[QA:messagehandler] Unknown message type - "));
             Serial.println(payload);
+            
+            // Don't print JSON objects, this might crash the system
+            // Serial.println(root);
             // String msg = "{\"messageType\":\"error\", \"errorMessage\":\"unknown messageType \"}";
             // sendMessage(msg);
         }
@@ -107,7 +112,12 @@ class QubeAdapter {
 
     void payloadHandler(uint8_t *payload, size_t length)
     {
-        Serial.printf("Got payload -> %s\n", payload);
+        Serial.print(F("[QA:payloadHandler] Got payload - "));
+        // Dumbo you can't print uint8_t datatype
+        // Serial.println(payload);
+        
+        // TODO - We are creating a character array in stack first,
+        // then creating a String in heap. Fix this.
         char msgch[length];
         for (unsigned int i = 0; i < length; i++)
         {
@@ -120,58 +130,64 @@ class QubeAdapter {
 
     void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     {
+        Serial.println(F("[QA:webSocketEvent]"));
         switch (type)
         {
         case WStype_DISCONNECTED:
-            // Serial.printf("[WSc] Disconnected!\n");
+            Serial.println(F("[QA:webSocketEvent:WStype_DISCONNECTED] Disconnected!"));
             break;
 
         case WStype_CONNECTED:
-            Serial.printf("[WSc] Connected to url: %s\n", payload);
+            Serial.print(F("[QA:webSocketEvent:WStype_CONNECTED] Connceted to URL - "));
+            // TODO Dumbo you can't print uint8_t
+            // Serial.println(payload);
             webSocket.sendTXT("{\"messageType\":\"StartWs\"}");
             break;
 
         case WStype_TEXT:
+            Serial.println(F("[QA:webSocketEvent:WStype_TEXT]"));
             payloadHandler(payload, length);
             break;
 
         case WS_EVT_DATA:
-            Serial.printf("[WSc] get binary length: %u\n", length);
+            Serial.print(F("[QA:webSocketEvent:WS_EVT_DATA] Binary Length - "));
+            Serial.println(length);
             break;
         
         case WStype_ERROR:
-            Serial.printf("[WSc] Error!\n");
+            Serial.println(F("[QA:webSocketEvent:WStype_ERROR] Error!"));
             break;
         
         case WStype_FRAGMENT_TEXT_START:
-            Serial.printf("[WSc] Fragment Text Start!\n");
+            Serial.println(F("[QA:webSocketEvent:WStype_FRAGMENT_TEXT_START]"));
             break;
         
         case WStype_FRAGMENT_BIN_START:
-            Serial.printf("[WSc] Fragment Bin Start!\n");
+            Serial.println(F("[QA:webSocketEvent:WStype_FRAGMENT_BIN_START]"));
             break;
 
         case WStype_FRAGMENT:
-            Serial.printf("[WSc] Fragment!\n");
+            Serial.println(F("[QA:webSocketEvent:WStype_FRAGMENT]"));
             break;
         
         case WStype_FRAGMENT_FIN:
-            Serial.printf("[WSc] Fragment Fin!\n");
+            Serial.println(F("[QA:webSocketEvent:WStype_FRAGMENT_FIN]"));   
             break;
 
         case WStype_PING:
-            Serial.printf("[WSc] Ping!\n");
+            Serial.println(F("[QA:webSocketEvent:WStype_PING]"));   
             break;
         
         case WStype_PONG:
-            Serial.printf("[WSc] Pong!\n");
+            Serial.println(F("[QA:webSocketEvent:WStype_PONG]"));
             break;
         
 
         }
 }
 
-    ThingDevice* findDeviceById(String id){
+    ThingDevice* findDeviceById(String id) {
+        Serial.println(F("[QA:findDeviceById]"));
         ThingDevice *device = this->firstDevice;
         while(device != nullptr){
             if(device->id == id){
@@ -182,7 +198,8 @@ class QubeAdapter {
         return nullptr;
     }
 
-    ThingProperty *findPropertyById(ThingDevice *device, String id){
+    ThingProperty *findPropertyById(ThingDevice *device, String id) {
+        Serial.println(F("[QA:findPropertyById]"));
         ThingProperty *property = device->firstProperty;
         while(property != nullptr){
             if(property->id == id){
@@ -193,7 +210,8 @@ class QubeAdapter {
         return nullptr;
     }
 
-    ThingAction *findActionById(ThingDevice *device, String id){
+    ThingAction *findActionById(ThingDevice *device, String id) {
+        Serial.println(F("[QA:findActionById]"));
         ThingAction *action = device->firstAction;
         while(action != nullptr){
             if(action->id == id){
@@ -204,7 +222,8 @@ class QubeAdapter {
         return nullptr;
     }
 
-    ThingEvent *findEventById(ThingDevice *device, String id){
+    ThingEvent *findEventById(ThingDevice *device, String id) {
+        Serial.println(F("[QA:findEventById]"));
         ThingEvent *event = device->firstEvent;
         while(event != nullptr){
             if(event->id == id){
@@ -217,6 +236,7 @@ class QubeAdapter {
 
     // Begin method
     void begin(String websocketUrl, int websocketPort, String websocketPath) {
+        Serial.println(F("[QA:begin]"));
 
         #ifdef WSS_ENABLED
         webSocket.beginSSL(websocketUrl.c_str(), websocketPort, websocketPath.c_str());
@@ -232,8 +252,8 @@ class QubeAdapter {
 
     // Update method
     void update(){
-        
         webSocket.loop();
+        
         #ifndef WITHOUT_WS
         // * Send changed properties as defined in "4.5 propertyStatus message"
         // Do this by looping over all devices and properties
@@ -247,6 +267,7 @@ class QubeAdapter {
 
     // Add device method
     void addDevice(ThingDevice *device){
+        Serial.println(F("[QA:addDevice]"));
 
         // TODO - I don't fully understand this logic.
         if (this->lastDevice == nullptr) {
@@ -260,7 +281,9 @@ class QubeAdapter {
     }
 
     void sendChangedProperties(ThingDevice *device) {
-    // Prepare one buffer per device
+        Serial.println(F("[QA:sendChangedProperties]"));
+
+        // Prepare one buffer per device
         DynamicJsonDocument message(LARGE_JSON_DOCUMENT_SIZE);
         message["messageType"] = "propertyStatus";
         JsonObject prop = message.createNestedObject("data");
@@ -283,7 +306,9 @@ class QubeAdapter {
     }
 
     // This is function is callback for `/things`
-    void handleThings(){
+    void handleThings() {
+        Serial.println(F("[QA:handleThings]"));
+
         DynamicJsonDocument buf(LARGE_JSON_DOCUMENT_SIZE);
         JsonArray things = buf.to<JsonArray>();
         ThingDevice *device = this->firstDevice;
@@ -293,6 +318,7 @@ class QubeAdapter {
             descr["href"] = "/things/" + device->id;
             device = device->next;   
         }
+
         StaticJsonDocument<LARGE_JSON_DOCUMENT_SIZE> doc;
         JsonObject doc2 = doc.to<JsonObject>();
         doc2["messageType"] = "descriptionOfThings";
@@ -304,6 +330,7 @@ class QubeAdapter {
 
     // This is function is callback for `/things/{thingId}`
     void handleThing(String thingId) {
+        Serial.println(F("[QA:handleThing]"));
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
@@ -320,6 +347,7 @@ class QubeAdapter {
 
     // This is function is callback for GET `/things/{thingId}/properties`
     void handleThingPropertyGet(String thingId, String propertyId) {
+        Serial.println(F("[QA:handleThingPropertyGet]"));
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
@@ -346,6 +374,8 @@ class QubeAdapter {
 
     // This is function is callback for GET `/things/{thingId}/actions/{actionId}`
     void handleThingActionGet(String thingId, String actionId) {
+        Serial.println(F("[QA:handleThingActionGet]"));
+
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
@@ -366,7 +396,8 @@ class QubeAdapter {
 
     // Delete action from queue
     void handleThingActionDelete(String thingId, String actionId){
-        
+        Serial.println(F("[QA:handleThingActionDelete]"));
+
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             return;
@@ -375,7 +406,9 @@ class QubeAdapter {
     }
 
     // This function is callback for POST `/things/{thingId}/actions/{actionId}`
-    void handleThingActionPost(String thingId, const char *newActionData){
+    void handleThingActionPost(String thingId, const char *newActionData) {
+        Serial.println(F("[QA:handleThingActionPost]"));
+
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             return;
@@ -385,7 +418,7 @@ class QubeAdapter {
         auto error = deserializeJson(*newBuffer, newActionData);
         if (error) {
             // send error as response
-            Serial.print(F("[handleThingActionsPost()] deserializeJson() failed with code "));
+            Serial.print(F("[QA:handleThingActionsPost] deserializeJson() failed with code - "));
             Serial.println(error.c_str());
             return;
         }
@@ -394,7 +427,7 @@ class QubeAdapter {
         ThingActionObject *obj = device->requestAction(newBuffer);
         if (obj == nullptr) {
             // Send error as response
-            Serial.println(F("[handleThingActionsPost()] requestAction() failed. Obj was nullptr."));
+            Serial.println(F("[QA:handleThingActionsPost] requestAction() failed. Obj was nullptr."));
             delete newBuffer;
             return;
         }
@@ -420,7 +453,9 @@ class QubeAdapter {
     }
 
     // This function is callback for GET `/things/{thingId}/events/{eventId}`
-    void handleThingEventGet(String thingId, String eventId){
+    void handleThingEventGet(String thingId, String eventId) {
+        Serial.println(F("[QA:handleThingEventGet]"));
+
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
@@ -440,7 +475,9 @@ class QubeAdapter {
     }
 
     // This function is callback for GET `/things/{thingId}/properties`
-    void handleThingPropertiesGet(String thingId){
+    void handleThingPropertiesGet(String thingId) {
+        Serial.println(F("[QA:handleThingPropertiesGet]"));
+
         ThingItem *rootItem = findDeviceById(thingId)->firstProperty;
         if (rootItem == nullptr) {
             String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
@@ -464,7 +501,9 @@ class QubeAdapter {
     }
 
     // This function is callback for POST `/things/{thingId}/actions`
-    void handleThingActionsGet(String thingId){
+    void handleThingActionsGet(String thingId) {
+        Serial.println(F("[QA:handleThingActionsGet]"));
+
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
@@ -479,7 +518,9 @@ class QubeAdapter {
     }
 
     // This function is callback for POST `/things/{thingId}/actions`
-    void handleThingActionsPost(String thingId, const char *newActionData){
+    void handleThingActionsPost(String thingId, const char *newActionData) {
+        Serial.println(F("[QA:handleThingActionsPost]"));
+
        ThingDevice *device = findDeviceById(thingId);
        if (device == nullptr) {
             String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
@@ -490,7 +531,7 @@ class QubeAdapter {
         auto error = deserializeJson(*newBuffer, newActionData);
         if (error) {
             // send error as response
-            Serial.print(F("[handleThingActionPost()] deserializeJson() failed with code "));
+            Serial.print(F("[QA:handleThingActionPost] deserializeJson() failed with code - "));
             Serial.println(error.c_str());
             return;
         }
@@ -499,7 +540,7 @@ class QubeAdapter {
         ThingActionObject *obj = device->requestAction(newBuffer);
         if (obj == nullptr) {
             // Send error as response
-            Serial.println(F("[handleThingActionPost()] requestAction() failed. Obj was nullptr."));
+            Serial.println(F("[QA:handleThingActionPost()] requestAction() failed. Obj was nullptr."));
             delete newBuffer;
             String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Request action was null ptr.\", \"thingId\": \"" + thingId + "\", \"actionId\": \"" + obj->id + "\"}";
            sendMessage(msg);
@@ -528,6 +569,7 @@ class QubeAdapter {
 
     // This function is callback for GET `/things/{thingId}/events`
     void handleThingEventsGet(String thingId) {
+        Serial.println(F("[QA:handleThingEventsGet]"));
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
             String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
@@ -544,6 +586,7 @@ class QubeAdapter {
 
     // This function was used to call handleBody for all requests
     void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        Serial.println(F("[QA:handleBody]"));
         if (total >= ESP_MAX_PUT_BODY_SIZE || index + len >= ESP_MAX_PUT_BODY_SIZE) {
             return; // cannot store this size..
         }
@@ -554,7 +597,7 @@ class QubeAdapter {
 
     // This function is callback for PUT `/things/{thingId}/properties/{propertyId}`
     void handleThingPropertyPut(String thingId, String propertyId, String newPropertyData){
-
+        Serial.println(F("[QA:handleThingPropertyPut]"));
 
         ThingDevice *device = findDeviceById(thingId);
         if (device == nullptr) {
@@ -569,7 +612,7 @@ class QubeAdapter {
 
         if (error) { 
             // unable to parse json
-            Serial.println("Unable to parse json for property PUT request V2");
+            Serial.print(F("Unable to parse json for property PUT request V2 - "));
             Serial.println(error.c_str());
             // serializeJsonPretty(newPropertyData, Serial);
             return;
