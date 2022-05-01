@@ -1,6 +1,6 @@
 #pragma once
 
-// #define ESP8266 1
+#define ESP8266 1
 
 #if defined(ESP32) || defined(ESP8266)
 
@@ -100,7 +100,7 @@ class QubeAdapter {
         }
 
         else {
-            QA_LOG("[QA:messageHandler] Unknown message type received. Payload: %s\n", payload);
+            QA_LOG("[QA:messageHandler] Unknown message type received. Payload: %s\n", payload.c_str());
             // String msg = "{\"messageType\":\"error\", \"errorMessage\":\"unknown messageType \"}";
             // sendMessage(msg);
         }
@@ -110,6 +110,7 @@ class QubeAdapter {
     void payloadHandler(uint8_t *payload, size_t length)
     {
         // Serial.printf("Got payload -> %s\n", payload);
+        QA_LOG("[QA:payloadHandler] New message received!\n");
         char msgch[length];
         for (unsigned int i = 0; i < length; i++)
         {
@@ -309,6 +310,7 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(doc2, jsonStr);
         sendMessage(jsonStr);
+        QA_LOG("[QA:handleThings] Thing description of all devices sent!\n");
     }
 
     // This is function is callback for `/things/{thingId}`
@@ -325,6 +327,8 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(descr, jsonStr);
         sendMessage(jsonStr);
+
+        QA_LOG("[QA:handleThing] Thing description sent!\n");
     }   
 
     // This is function is callback for GET `/things/{thingId}/properties`
@@ -426,6 +430,8 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(item, jsonStr);
         obj->start();
+
+        QA_LOG("[QA:handleThingActionPost] Action for the particular thing has been started.\n");
     }
 
     // This function is callback for GET `/things/{thingId}/events/{eventId}`
@@ -455,6 +461,8 @@ class QubeAdapter {
             String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
            sendMessage(msg);
         }
+
+        // TODO Instead of using two DyanmicJsonDocument, use one
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
         ThingItem *item = rootItem;
@@ -470,6 +478,7 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(finalProp, jsonStr);
         sendMessage(jsonStr);
+        QA_LOG("[QA:handleThingPropertiesGet] Property data was sent back.\n");
     }
 
     // This function is callback for POST `/things/{thingId}/actions`
@@ -583,6 +592,7 @@ class QubeAdapter {
             // serializeJsonPretty(newPropertyData, Serial);
             return;
         }
+
         newBuffer["thingId"] = thingId;
         newBuffer["messageType"] = "updatedProperty";
         JsonObject newProp = newBuffer.as<JsonObject>();
@@ -590,6 +600,8 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(newProp, jsonStr);
         sendMessage(jsonStr);
+
+        QA_LOG("[QA:handleThingPropertyPut] Property value has been set! \n");
     }
 
 };
