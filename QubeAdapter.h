@@ -73,7 +73,7 @@ class QubeAdapter {
             handleThingPropertiesGet(thingId);
         }
 
-        if (root["messageType"] == "setProperty") {
+        else if (root["messageType"] == "setProperty") {
             String thingId = root["thingId"];
             String propertyId = root["data"]["propertyId"];
             QA_LOG("[QA:messageHandler] Received a 'setProperty' message\n");
@@ -81,18 +81,18 @@ class QubeAdapter {
             handleThingPropertyPut(thingId, propertyId, data);
         }
 
-        if (root["messageType"] == "getThingDescription") {
+        else if (root["messageType"] == "getThingDescription") {
             QA_LOG("[QA:messageHandler] Received a 'getThingDescription' message\n");
             String thingId = root["thingId"];
             handleThing(thingId);
         }
 
-        if (root["messageType"] == "getAllThings") {
+        else if (root["messageType"] == "getAllThings") {
             QA_LOG("[QA:messageHandler] Received a 'getAllThings' message\n");
             handleThings();
         }
 
-        if (root["messageType"] == "performAction") {
+        else if (root["messageType"] == "performAction") {
             QA_LOG("[QA:messageHandler] Received a 'performAction' message\n");
             String thingId = root["thingId"];
             String actionId = root["data"]["actionId"];
