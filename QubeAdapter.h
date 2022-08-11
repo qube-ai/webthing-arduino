@@ -1,5 +1,6 @@
 #pragma once
 
+#define ESP8266 1
 
 #if defined(ESP32) || defined(ESP8266)
 
@@ -8,6 +9,7 @@
 #include "Thing.h"
 #include <WebSocketsClient.h>
 
+#define QA_LOG(...) Serial.printf(__VA_ARGS__)
 #define ESP_MAX_PUT_BODY_SIZE 512
 
 #ifndef LARGE_JSON_DOCUMENT_SIZE
@@ -58,8 +60,7 @@ class QubeAdapter {
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         DeserializationError error = deserializeJson(doc, payload);
         if (error) {
-            Serial.print(F("deserializeJson() failed: "));
-            Serial.println(error.c_str());
+            QA_LOG("[QA:messageHandler] deserializeJson() failed: %s\n", error.c_str());
             String msg = "{\"messageType\":\"error\", \"errorMessage\":\"deserializeJson() failed \"}";
             sendMessage(msg);
         }
@@ -67,38 +68,39 @@ class QubeAdapter {
         JsonObject root = doc.as<JsonObject>();
 
         if (root["messageType"] == "getProperty") {
+            QA_LOG("[QA:messageHandler] Received a 'getProperty' message\n");
             String thingId = root["thingId"];
             handleThingPropertiesGet(thingId);
         }
 
-        if (root["messageType"] == "setProperty") {
+        else if (root["messageType"] == "setProperty") {
             String thingId = root["thingId"];
             String propertyId = root["data"]["propertyId"];
-            Serial.println("messageType setProperty was called");
-            Serial.println("Going to change the property");
+            QA_LOG("[QA:messageHandler] Received a 'setProperty' message\n");
             String data  = root["data"];
             handleThingPropertyPut(thingId, propertyId, data);
         }
 
-        if (root["messageType"] == "getThingDescription") {
+        else if (root["messageType"] == "getThingDescription") {
+            QA_LOG("[QA:messageHandler] Received a 'getThingDescription' message\n");
             String thingId = root["thingId"];
             handleThing(thingId);
         }
 
-        if (root["messageType"] == "getAllThings") {
+        else if (root["messageType"] == "getAllThings") {
+            QA_LOG("[QA:messageHandler] Received a 'getAllThings' message\n");
             handleThings();
         }
 
-        if (root["messageType"] == "performAction") {
+        else if (root["messageType"] == "performAction") {
+            QA_LOG("[QA:messageHandler] Received a 'performAction' message\n");
             String thingId = root["thingId"];
             String actionId = root["data"]["actionId"];
             handleThingActionPost(thingId, (const char*)root["data"]);
         }
 
         else {
-            Serial.println("Unknown message type");
-            Serial.println(root);
-            Serial.println(payload);
+            QA_LOG("[QA:messageHandler] Unknown message type received. Payload: %s\n", payload.c_str());
             // String msg = "{\"messageType\":\"error\", \"errorMessage\":\"unknown messageType \"}";
             // sendMessage(msg);
         }
@@ -107,7 +109,8 @@ class QubeAdapter {
 
     void payloadHandler(uint8_t *payload, size_t length)
     {
-        Serial.printf("Got payload -> %s\n", payload);
+        // Serial.printf("Got payload -> %s\n", payload);
+        QA_LOG("[QA:payloadHandler] New message received!\n");
         char msgch[length];
         for (unsigned int i = 0; i < length; i++)
         {
@@ -123,11 +126,12 @@ class QubeAdapter {
         switch (type)
         {
         case WStype_DISCONNECTED:
-            // Serial.printf("[WSc] Disconnected!\n");
+            QA_LOG("[QA:webSocketEvent] Disconnect!\n");
             break;
 
         case WStype_CONNECTED:
-            Serial.printf("[WSc] Connected to url: %s\n", payload);
+            QA_LOG("[QA:webSocketEvent] Connected to tunnel server!\n");
+            // Serial.printf("[WSc] Connected to url: %s\n", payload);
             webSocket.sendTXT("{\"messageType\":\"StartWs\"}");
             break;
 
@@ -136,38 +140,44 @@ class QubeAdapter {
             break;
 
         case WS_EVT_DATA:
-            Serial.printf("[WSc] get binary length: %u\n", length);
+            QA_LOG("[QA:webSocketEvent] binary length: %u\n", length);
+            // Serial.printf("[WSc] get binary length: %u\n", length);
             break;
         
         case WStype_ERROR:
-            Serial.printf("[WSc] Error!\n");
+            // Serial.printf("[WSc] Error!\n");
+            QA_LOG("[QA:webSocketEvent] Error!\n");
             break;
         
         case WStype_FRAGMENT_TEXT_START:
-            Serial.printf("[WSc] Fragment Text Start!\n");
+            // Serial.printf("[WSc] Fragment Text Start!\n");
+            QA_LOG("[QA:webSocketEvent] Fragment Text Start!\n");
             break;
         
         case WStype_FRAGMENT_BIN_START:
-            Serial.printf("[WSc] Fragment Bin Start!\n");
+            // Serial.printf("[WSc] Fragment Bin Start!\n");
+            QA_LOG("[QA:webSocketEvent] Fragment Bin Start!\n");
             break;
 
         case WStype_FRAGMENT:
-            Serial.printf("[WSc] Fragment!\n");
+            // Serial.printf("[WSc] Fragment!\n");
+            QA_LOG("[QA:webSocketEvent] Fragment!\n");
             break;
         
         case WStype_FRAGMENT_FIN:
-            Serial.printf("[WSc] Fragment Fin!\n");
+            // Serial.printf("[WSc] Fragment Fin!\n");
+            QA_LOG("[QA:webSocketEvent] Fragment Fin!\n");
             break;
 
         case WStype_PING:
-            Serial.printf("[WSc] Ping!\n");
+            // Serial.printf("[WSc] Ping!\n");
+            QA_LOG("[QA:webSocketEvent] Ping!\n");
             break;
         
         case WStype_PONG:
-            Serial.printf("[WSc] Pong!\n");
+            // Serial.printf("[WSc] Pong!\n");
+            QA_LOG("[QA:webSocketEvent] Pong!\n");
             break;
-        
-
         }
 }
 
@@ -318,6 +328,7 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(doc2, jsonStr);
         sendMessage(jsonStr);
+        QA_LOG("[QA:handleThings] Thing description of all devices sent!\n");
     }
 
     // This is function is callback for `/things/{thingId}`
@@ -334,6 +345,8 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(descr, jsonStr);
         sendMessage(jsonStr);
+
+        QA_LOG("[QA:handleThing] Thing description sent!\n");
     }   
 
     // This is function is callback for GET `/things/{thingId}/properties`
@@ -435,6 +448,8 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(item, jsonStr);
         obj->start();
+
+        QA_LOG("[QA:handleThingActionPost] Action for the particular thing has been started.\n");
     }
 
     // This function is callback for GET `/things/{thingId}/events/{eventId}`
@@ -464,6 +479,8 @@ class QubeAdapter {
             String msg = "{\"messageType\":\"error\",\"errorCode\":\"404\",\"errorMessage\":\"Thing not found\", \"thingId\": \"" + thingId + "\"}";
            sendMessage(msg);
         }
+
+        // TODO Instead of using two DyanmicJsonDocument, use one
         DynamicJsonDocument doc(LARGE_JSON_DOCUMENT_SIZE);
         JsonObject prop = doc.to<JsonObject>();
         ThingItem *item = rootItem;
@@ -479,6 +496,7 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(finalProp, jsonStr);
         sendMessage(jsonStr);
+        QA_LOG("[QA:handleThingPropertiesGet] Property data was sent back.\n");
     }
 
     // This function is callback for POST `/things/{thingId}/actions`
@@ -592,6 +610,7 @@ class QubeAdapter {
             // serializeJsonPretty(newPropertyData, Serial);
             return;
         }
+
         newBuffer["thingId"] = thingId;
         newBuffer["messageType"] = "updatedProperty";
         JsonObject newProp = newBuffer.as<JsonObject>();
@@ -599,6 +618,8 @@ class QubeAdapter {
         String jsonStr;
         serializeJson(newProp, jsonStr);
         sendMessage(jsonStr);
+
+        QA_LOG("[QA:handleThingPropertyPut] Property value has been set! \n");
     }
 
 };
