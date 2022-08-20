@@ -16,8 +16,8 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
     lib_deps = https://github.com/qube-ai/webthing-arduino.git
     ```
 
-## Importmant MACROS
-- `#define SSL_ENABLED 1` : For enabling connection over WSS
+## SSL
+- For ssl use `beginSSL()` method of QubeAdapter.
 
 ## Message Schema
 ![Schema](https://img.shields.io/badge/Schema-Qube%20Things-blue.svg)
@@ -120,7 +120,7 @@ response :
 
 > These are the only messageType(s) that the library will/can send to tunnel server.
 
-- `Property Status` The propertyStatus message type is sent from a Web Thing to a web client whenever a property of a Web Thing changes. The payload data of this message is in the same format as a response to a GET request on Property resource using the REST API, but the message is pushed to the client whenever a property changes and can include multiple properties at the same time.
+- `Property Status` The propertyStatus message type is sent from a Thing to a tunnel server whenever a property of a Thing changes. The payload data of this message is in the same format as a response to a GET request on Property resource using the REST API, but the message is pushed to the client whenever a property changes and can include multiple properties at the same time.
 ```json
 {
   "messageType": "propertyStatus",
