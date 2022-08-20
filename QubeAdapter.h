@@ -218,17 +218,35 @@ class QubeAdapter {
     // Begin method
     void begin(String websocketUrl, int websocketPort, String websocketPath) {
 
-        #ifdef WSS_ENABLED
-        webSocket.beginSSL(websocketUrl.c_str(), websocketPort, websocketPath.c_str());
-        #else
         // server address, port and URL
         webSocket.begin(websocketUrl, websocketPort, websocketPath);
-        #endif
         // event handler
         webSocket.onEvent(std::bind(
         &QubeAdapter::webSocketEvent, this,std::placeholders::_1,
         std::placeholders::_2, std::placeholders::_3));
     }
+
+    void beginSSL(String websocketUrl, int websocketPort, String websocketPath) {
+
+        // server address, port and URL
+        webSocket.beginSSL(websocketUrl.c_str(), websocketPort, websocketPath.c_str());
+        // event handler
+        webSocket.onEvent(std::bind(
+        &QubeAdapter::webSocketEvent, this,std::placeholders::_1,
+        std::placeholders::_2, std::placeholders::_3));
+    }
+
+    // Begin SSL method
+    // void beginSslWithCA(String websocketUrl, int websocketPort, String websocketPath, const char *CA_cert) {
+
+    //     // webSocket.beginSSL(websocketUrl.c_str(), websocketPort, websocketPath.c_str());
+    //     webSocket.beginSslWithCA(websocketUrl.c_str(), websocketPort, websocketPath.c_str(), CA_cert);
+
+    //     // event handler
+    //     webSocket.onEvent(std::bind(
+    //     &QubeAdapter::webSocketEvent, this,std::placeholders::_1,
+    //     std::placeholders::_2, std::placeholders::_3));
+    // }
 
     // Update method
     void update(){
