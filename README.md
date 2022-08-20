@@ -358,4 +358,6 @@ ThingActionObject *action_generator(DynamicJsonDocument *input) {
 ```
 ## Architecture for tunnel
 
+> `updatedProperty` message also contains thing_id. thingId is missing from the message in SequenceDiagram. 
+
 ![Sequence diagram](docs/tunnel-arch.png)
