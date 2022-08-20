@@ -16,6 +16,9 @@ A library with simple websocket client for the ESP8266 and the ESP32 boards that
     lib_deps = https://github.com/qube-ai/webthing-arduino.git
     ```
 
+## Importmant MACROS
+- `#define SSL_ENABLED 1` : For enabling connection over WSS
+
 ## Message Schema
 ![Schema](https://img.shields.io/badge/Schema-Qube%20Things-blue.svg)
 
@@ -321,3 +324,6 @@ ThingActionObject *action_generator(DynamicJsonDocument *input) {
   return new ThingActionObject("fade", input, do_fade, nullptr);
 }
 ```
+## Architecture for tunnel
+
+![Sequence diagram](docs/tunnel-arch.png)

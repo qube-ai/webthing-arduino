@@ -1,0 +1,17 @@
+title Tunnel Server Arch (WS)
+
+
+
+Thing->Tunnel:Connection Establish
+Thing->Tunnel: **Intiate a websocket connection** \n \n{ "messageType" : "StartWs" }
+Tunnel->Thing: **Asks for its thing description** \n \n{ "messageType" : "getAllThings" }
+Thing->Tunnel: **Sends an array of all things.** \n Note: We can create multiple things \n on same harwdware .\n \n{\n     "messageType" : "descriptionOfThings",\n  			"things" : [... allThings]\n }
+Tunnel->Thing: **Asks for all its properties.** \n \n{\n      "messageType": "getProperty",\n      "thingId": thing_id\n }
+Thing->Tunnel: **Sends and json of all properties\n with all its current state.** \n \n{\n "messageType": "getProperty",\n "thingId" : thing_id,\n "properties" : {\n     "property1" : state, \n      .\n      .\n     "propertyN": stateN\n      }\n}
+abox over Thing,Tunnel: **Whenever thing has new update (async)** \n\n--Note: Whenever any properties gets updated put like\nrelay switch changes, or any changes made locally\nthat might update any property. --\n\n {\n "messageType" : "propertyStatus",\n "thingId" : thing_id\n "data" : {\n       "propertyId" : "propertyValue"  \n}
+WebServer->Tunnel: Connection Establish 
+abox over Tunnel,WebServer: **Whenever tunnel has new update (async)** \n {\n "messageType" : "propertyStatus",\n "thingId" : thing_id\n "data" : {\n       "propertyId" : "propertyValue"  \n}
+WebServer->Tunnel: **Makes PUT request to\nchange any property. 
+Tunnel->Thing: **Change any property from dashboard** \n \n \n{\n     "messageType": "setProperty", ,\n  			"thingId": thing_id,\n     "data": {\n                  'propertyId': property_id,\n                  'value': newValue\n                 }\n }
+Thing->Tunnel: **Sends updated properties\nconfirmation**  \n--Note: Whenever we make put\nrequest to change any property\nwe do not update the local store\nthus, this message will update\nthe local store.  --\n\n{\n "messageType" : "updatedProperty", \n   "propertyId"  : property_id, \n   "value": value\n}  
+
